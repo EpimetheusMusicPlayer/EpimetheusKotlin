@@ -1,10 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/playlistFragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".fragments.PlaylistFragment">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/empty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/empty_icon"
+            android:layout_width="128dp"
+            android:layout_height="128dp"
+            android:layout_gravity="center"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:contentDescription="Go to station list"
+            android:src="@drawable/ic_stations_black_24dp"
+            android:tint="?android:attr/textColorSecondary"
+            app:layout_constraintBottom_toTopOf="@id/empty_message"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_chainStyle="packed" />
+
+        <TextView
+            android:id="@+id/empty_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
+            android:paddingStart="64dp"
+            android:paddingEnd="64dp"
+            android:text="No station is playing.\nChoose a station from the station list."
+            android:textAlignment="center"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/empty_icon"
+            app:layout_constraintVertical_chainStyle="packed" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ProgressBar
         android:id="@+id/loading_widget"
@@ -14,7 +58,7 @@
         android:layout_gravity="center"
         android:layout_weight="1"
         android:visibility="visible"
-        tools:visibility="visible" />
+        tools:visibility="gone" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/song_list"
@@ -26,7 +70,7 @@
 
     <fragment
         android:id="@+id/fragment_media_control"
-        android:name="tk.hacker1024.epimetheus.fragments.MediaControlFragment"
+        class="tk.hacker1024.epimetheus.fragments.MediaControlFragment"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="0"

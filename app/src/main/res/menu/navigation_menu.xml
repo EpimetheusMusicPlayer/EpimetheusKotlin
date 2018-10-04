@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/stationListFragment"
+        android:icon="@drawable/ic_stations_black_24dp"
+        android:title="@string/fragment_label_station_list" />
+    <item
+        android:id="@+id/playlistFragment"
+        android:icon="@drawable/ic_play_arrow_black_24dp"
+        android:title="@string/fragment_label_playlist" />
+</menu>

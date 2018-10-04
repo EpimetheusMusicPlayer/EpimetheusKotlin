@@ -22,6 +22,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.os.bundleOf
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.app.NotificationCompat.MediaStyle
 import androidx.media.session.MediaButtonReceiver
@@ -53,6 +54,8 @@ private const val ALBUM_ART_SIZE = 500
 
 private const val LOG_TAG = "EpimetheusMediaService" // This tag is used for the media session
 private const val MEDIA_NOTIFICATION_CHANNEL_ID = "media" // This is the channel ID for the media notification
+
+internal const val RESULTS_BROADCAST_FILTER = "tk.hacker1024.epimetheus.serviceStateChange"
 
 internal enum class MusicServiceResults(var message: String = "") {
     REQUEST_CLOSE_APP,
@@ -182,12 +185,10 @@ internal class MusicService : MediaBrowserServiceCompat() {
             .addAction(
                 R.drawable.ic_stop_black_24dp,
                 "Stop",
-                PendingIntent.getBroadcast(
+                PendingIntent.getService(
                     this,
                     0,
-                    Intent("tk.superl2.epimetheus.serviceStateChange").putExtra("error",
-                        MusicServiceResults.REQUEST_CLOSE_APP
-                    ),
+                    Intent(this, MusicService::class.java).putExtra("close", true),
                     PendingIntent.FLAG_UPDATE_CURRENT
                 )
             )
@@ -226,6 +227,11 @@ internal class MusicService : MediaBrowserServiceCompat() {
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+        if (intent.getBooleanExtra("close", false)) {
+            stop(MusicServiceResults.REQUEST_CLOSE_APP)
+            return START_NOT_STICKY
+        }
+
         // Start the service in the foreground
         startForeground(1, mediaNotificationBuilder.build())
 
@@ -482,12 +488,11 @@ internal class MusicService : MediaBrowserServiceCompat() {
         }
         stopForeground(true)
         stopSelf()
-        sendBroadcast(
-            Intent("tk.superl2.epimetheus.serviceStateChange")
+        LocalBroadcastManager.getInstance(this).sendBroadcast(
+            Intent(RESULTS_BROADCAST_FILTER)
                 .putExtra("disconnect", true)
                 .putExtra("error", error)
-                .putExtra("message", error.message),
-            "tk.superl2.epimetheus.HANDLE_MUSIC_SERVICE_EVENTS"
+                .putExtra("message", error.message)
         )
     }
 

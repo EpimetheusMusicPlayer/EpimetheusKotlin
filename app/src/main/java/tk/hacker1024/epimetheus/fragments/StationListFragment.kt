@@ -7,7 +7,8 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.*
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -16,54 +17,25 @@ import com.squareup.picasso.Picasso
 import jp.wasabeef.picasso.transformations.RoundedCornersTransformation
 import kotlinx.android.synthetic.main.fragment_station_list.view.*
 import kotlinx.android.synthetic.main.station_card.view.*
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import org.json.JSONException
 import tk.hacker1024.epimetheus.MainActivity
+import tk.hacker1024.epimetheus.PandoraViewModel
 import tk.hacker1024.epimetheus.R
-import tk.hacker1024.libepimetheus.Stations
-import tk.hacker1024.libepimetheus.User
-import tk.hacker1024.libepimetheus.data.Station
-import java.io.IOException
 
-class StationListViewModel : ViewModel() {
-    lateinit var user: User
-    private lateinit var stationList: MutableLiveData<List<Station>?>
-
-    internal fun getStationListLiveData(): LiveData<List<Station>?> {
-        if (!::stationList.isInitialized) {
-            stationList = MutableLiveData()
-            loadStations()
-        }
-        return stationList
-    }
-
-    internal fun loadStations() {
-        GlobalScope.launch  {
-            stationList.postValue(
-                try {
-                    Stations.getStations(user)
-                } catch (e: IOException) {
-                    null
-                }
-            )
-        }
-    }
-}
+//TODO dont load every time, use activity viewmodel
 
 class StationListFragment : Fragment() {
-    private lateinit var viewModel: StationListViewModel
+    private lateinit var viewModel: PandoraViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         // Get the ViewModel
-        viewModel = ViewModelProviders.of(this).get(StationListViewModel::class.java)
-        viewModel.user = StationListFragmentArgs.fromBundle(arguments).user
+        viewModel = ViewModelProviders.of(requireActivity())[PandoraViewModel::class.java]
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        viewModel.getStationListLiveData().observe(this, Observer {
+        viewModel.stationList.observe(this, Observer {
             if (it != null) {
                 view?.recyclerview_station_list?.adapter?.notifyDataSetChanged()
                 view?.recyclerview_station_list?.visibility = View.VISIBLE
@@ -110,6 +82,7 @@ class StationListFragment : Fragment() {
 
     override fun onStart() {
         super.onStart()
+
         if (view?.station_list_swipe_refresh_layout?.isRefreshing == true) {
             view?.recyclerview_station_list?.visibility = View.INVISIBLE
             viewModel.loadStations()
@@ -130,12 +103,12 @@ class StationListFragment : Fragment() {
         // TODO maybe I should make the Shuffle station stand out more...
         override fun onBindViewHolder(holder: StationListAdapterViewHolder, position: Int) {
             // Bind the station name
-            holder.card.station_name.text = viewModel.getStationListLiveData().value!![holder.adapterPosition].name
+            holder.card.station_name.text = viewModel.stationList.value!![holder.adapterPosition].name
 
             // Bind the station art
             Picasso.get()
                 .run {
-                    viewModel.getStationListLiveData().value!![holder.adapterPosition].getArtUrl(500).let { artUrl ->
+                    viewModel.stationList.value!![holder.adapterPosition].getArtUrl(500).let { artUrl ->
                         if (artUrl != null) {
                             load(artUrl)
                         } else {
@@ -154,16 +127,13 @@ class StationListFragment : Fragment() {
 
             holder.card.setOnClickListener {
                 findNavController().navigate(
-                    R.id.openAndPlayStationPlaylist,
-                    bundleOf(
-                        "user" to viewModel.user,
-                        "stationIndex" to holder.adapterPosition,
-                        "stations" to ArrayList(viewModel.getStationListLiveData().value!!)
-                    )
+                    StationListFragmentDirections
+                        .openAndPlayStationPlaylist()
+                        .setStationIndex(holder.adapterPosition)
                 )
             }
         }
 
-        override fun getItemCount() = viewModel.getStationListLiveData().value?.size ?: 0
+        override fun getItemCount() = viewModel.stationList.value?.size ?: 0
     }
 }

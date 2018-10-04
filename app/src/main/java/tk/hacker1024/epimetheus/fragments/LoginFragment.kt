@@ -8,15 +8,21 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProviders
+import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.ui.NavigationUI
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fragment_login.*
 import kotlinx.android.synthetic.main.fragment_login.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.MainActivity
+import tk.hacker1024.epimetheus.PandoraViewModel
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.dialogs.showLocationErrorDialog
 import tk.hacker1024.epimetheus.dialogs.showNetworkErrorDialog
@@ -84,10 +90,12 @@ class LoginFragment : Fragment() {
                 activity!!.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
                 findNavController().apply {
                     graph.startDestination = R.id.stationListFragment
+                    ViewModelProviders.of(requireActivity() as MainActivity)[PandoraViewModel::class.java].user = user
                     requireActivity().runOnUiThread {
                         navigate(
-                            LoginFragmentDirections.actionLoginFragmentToStationListFragment(user)
+                            LoginFragmentDirections.actionLoginFragmentToStationListFragment()
                         )
+                        NavigationUI.setupActionBarWithNavController(requireActivity() as AppCompatActivity, findNavController(), requireActivity().drawer_layout)
                     }
                 }
             } catch (ioException: IOException) {

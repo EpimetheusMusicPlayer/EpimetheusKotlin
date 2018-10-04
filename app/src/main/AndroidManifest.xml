@@ -2,11 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="tk.hacker1024.epimetheus">
 
-    <permission
-        android:name="tk.hacker1024.epimetheus.HANDLE_MUSIC_SERVICE_EVENTS"
-        android:protectionLevel="signature" />
-    <uses-permission android:name="tk.superl2.epimetheus.HANDLE_MUSIC_SERVICE_EVENTS" />
-
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 

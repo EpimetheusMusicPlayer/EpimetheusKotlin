@@ -55,6 +55,10 @@ class MediaControlFragment : Fragment() {
     override fun onStart() {
         super.onStart()
 
+        if (findNavController().currentDestination!!.id != R.id.playlistFragment) {
+            showIfServiceRunning()
+        }
+
         fun onConnect() {
             mediaController = MediaControllerCompat.getMediaController(requireActivity())
             mediaController!!.registerCallback(controllerCallback)
@@ -66,17 +70,6 @@ class MediaControlFragment : Fragment() {
         } else {
             (requireActivity() as MainActivity).connectMediaBrowser {
                 onConnect()
-            }
-        }
-
-        view?.apply {
-            visibility = View.GONE
-            @Suppress("DEPRECATION")
-            for (service in (requireActivity().getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getRunningServices(Int.MAX_VALUE)) {
-                if ((service.foreground && service.service.className == MusicService::class.java.name) || findNavController().currentDestination!!.id == R.id.playlistFragment) {
-                    show()
-                    break
-                }
             }
         }
     }
@@ -109,11 +102,27 @@ class MediaControlFragment : Fragment() {
         }
     }
 
-    private fun show() {
+    internal fun show() {
         view!!.visibility = View.VISIBLE
+    }
+
+    internal fun showIfServiceRunning() {
+        if (isServiceRunning(requireContext())) show()
     }
 
     private val controllerCallback = object : MediaControllerCompat.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackStateCompat) = updatePlaybackState(state.state)
+    }
+
+    companion object {
+        fun isServiceRunning(context: Context): Boolean {
+            @Suppress("DEPRECATION")
+            for (service in (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getRunningServices(Int.MAX_VALUE)) {
+                if ((service.foreground && service.service.className == MusicService::class.java.name)) {
+                    return true
+                }
+            }
+            return false
+        }
     }
 }

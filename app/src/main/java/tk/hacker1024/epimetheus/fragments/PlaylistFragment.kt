@@ -2,10 +2,7 @@ package tk.hacker1024.epimetheus.fragments
 
 import android.animation.Animator
 import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -21,6 +18,7 @@ import androidx.annotation.ColorInt
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -30,10 +28,9 @@ import kotlinx.android.synthetic.main.fragment_playlist.*
 import kotlinx.android.synthetic.main.fragment_playlist.view.*
 import kotlinx.android.synthetic.main.song_card_inactive.view.*
 import tk.hacker1024.epimetheus.MainActivity
+import tk.hacker1024.epimetheus.PandoraViewModel
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.service.MusicService
-import tk.hacker1024.epimetheus.service.MusicServiceResults
-import tk.hacker1024.libepimetheus.User
 
 // TODO BUG: When switching to another station without stopping the old station, the loading widget won't show; the screen will be blank until it loads.
 
@@ -44,19 +41,29 @@ class PlaylistFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        ContextCompat.startForegroundService(
-            requireContext(),
-            Intent(context, MusicService::class.java)
-                .putExtra("pandoraUserObject", arguments!!.getParcelable<User>("user"))
-                .putExtra("stationIndex", arguments!!.getInt("stationIndex"))
-                .putParcelableArrayListExtra("stations", arguments!!.getParcelableArrayList("stations"))
-        )
+        if (PlaylistFragmentArgs.fromBundle(arguments).stationIndex != -1) {
+            ContextCompat.startForegroundService(
+                requireContext(),
+                Intent(context, MusicService::class.java)
+                    .putExtra("pandoraUserObject", ViewModelProviders.of(requireActivity())[PandoraViewModel::class.java].user)
+                    .putExtra("stationIndex", PlaylistFragmentArgs.fromBundle(arguments).stationIndex)
+                    .putParcelableArrayListExtra("stations", ViewModelProviders.of(requireActivity())[PandoraViewModel::class.java].stationList.value!!)
+            )
+        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?) =
         inflater.inflate(R.layout.fragment_playlist, container, false)!!
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        if (PlaylistFragmentArgs.fromBundle(arguments).stationIndex == -1 && !MediaControlFragment.isServiceRunning(requireContext())) {
+            view.loading_widget.visibility = View.GONE
+            view.empty.visibility = View.VISIBLE
+            view.empty.setOnClickListener {
+                findNavController().navigateUp()
+            }
+        }
+
         view.song_list.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = SongRecyclerAdapter()
@@ -66,12 +73,11 @@ class PlaylistFragment : Fragment() {
     override fun onStart() {
         super.onStart()
 
-        requireContext().registerReceiver(
-            broadcastReceiver,
-            IntentFilter("tk.superl2.epimetheus.serviceStateChange"),
-            "tk.superl2.epimetheus.HANDLE_MUSIC_SERVICE_EVENTS",
-            null
-        )
+        if (PlaylistFragmentArgs.fromBundle(arguments).stationIndex == -1) {
+            (childFragmentManager.findFragmentById(R.id.fragment_media_control) as MediaControlFragment).showIfServiceRunning()
+        } else {
+            (childFragmentManager.findFragmentById(R.id.fragment_media_control) as MediaControlFragment).show()
+        }
 
         (requireActivity() as MainActivity).connectMediaBrowser {
             mediaController = MediaControllerCompat.getMediaController(requireActivity())
@@ -82,7 +88,6 @@ class PlaylistFragment : Fragment() {
 
     override fun onStop() {
         super.onStop()
-        requireContext().unregisterReceiver(broadcastReceiver)
         mediaController?.unregisterCallback(controllerCallback)
     }
 
@@ -176,86 +181,88 @@ class PlaylistFragment : Fragment() {
             )
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            holder.queueItemDescription = cachedQueue[holder.adapterPosition].description
+            try {
+                holder.queueItemDescription = cachedQueue[holder.adapterPosition].description
 
-            // Set the colors
-            colorSong(
-                holder.songCard,
-                holder.adapterPosition == 0,
-                holder.queueItemDescription.extras!!.getParcelable("rating")!!
-            )
-
-            // Bind the song title, artist, and album
-            holder.songCard.song_title.text = holder.queueItemDescription.title
-            holder.songCard.song_artist.text = holder.queueItemDescription.subtitle
-            holder.songCard.song_album.text = holder.queueItemDescription.description
-
-            // Bind the album art
-            holder.songCard.song_album_art.setImageBitmap(
-                RoundedCornersTransformation(25, 0).transform(
-                    holder.queueItemDescription.iconBitmap
+                // Set the colors
+                colorSong(
+                    holder.songCard,
+                    holder.adapterPosition == 0,
+                    holder.queueItemDescription.extras!!.getParcelable("rating")!!
                 )
-            )
 
-            // Skip to the song on click.
-            holder.songCard.setOnClickListener {
-                if (holder.adapterPosition != 0) {
-                    colorSong(
-                        holder.songCard,
-                        true,
-                        holder.queueItemDescription.extras!!.getParcelable("rating")!!
+                // Bind the song title, artist, and album
+                holder.songCard.song_title.text = holder.queueItemDescription.title
+                holder.songCard.song_artist.text = holder.queueItemDescription.subtitle
+                holder.songCard.song_album.text = holder.queueItemDescription.description
+
+                // Bind the album art
+                holder.songCard.song_album_art.setImageBitmap(
+                    RoundedCornersTransformation(25, 0).transform(
+                        holder.queueItemDescription.iconBitmap
                     )
-                    mediaController!!.transportControls.skipToQueueItem(holder.adapterPosition.toLong())
-                }
-            }
+                )
 
-            // Bind the rating progress
-            holder.queueItemDescription.extras!!.getParcelable<RatingCompat>("settingFeedback")!!.apply {
-                if (isRated) {
-                    if (this.isThumbUp) {
-                        holder.songCard.love_thumb.visibility = View.GONE
-                        holder.songCard.love_progress.visibility = View.VISIBLE
-                    } else {
-                        holder.songCard.ban_thumb.visibility = View.GONE
-                        holder.songCard.ban_progress.visibility = View.VISIBLE
+                // Skip to the song on click.
+                holder.songCard.setOnClickListener {
+                    if (holder.adapterPosition != 0) {
+                        colorSong(
+                            holder.songCard,
+                            true,
+                            holder.queueItemDescription.extras!!.getParcelable("rating")!!
+                        )
+                        mediaController!!.transportControls.skipToQueueItem(holder.adapterPosition.toLong())
                     }
-                } else {
-                    holder.songCard.ban_progress.visibility = View.GONE
-                    holder.songCard.love_progress.visibility = View.GONE
-                    holder.songCard.ban_thumb.visibility = View.VISIBLE
-                    holder.songCard.love_thumb.visibility = View.VISIBLE
                 }
-            }
 
-            holder.songCard.ban_thumb.setOnClickListener {
-                it.visibility = View.GONE
-                holder.songCard.ban_progress.visibility = View.VISIBLE
-                mediaController!!.transportControls.setRating(
-                    if (holder.queueItemDescription.extras!!.getParcelable<RatingCompat>("rating")!!.isRated && !holder.queueItemDescription.extras!!.getParcelable<RatingCompat>("rating")!!.isThumbUp) {
-                        RatingCompat.newUnratedRating(RatingCompat.RATING_THUMB_UP_DOWN)
+                // Bind the rating progress
+                holder.queueItemDescription.extras!!.getParcelable<RatingCompat>("settingFeedback")!!.apply {
+                    if (isRated) {
+                        if (this.isThumbUp) {
+                            holder.songCard.love_thumb.visibility = View.GONE
+                            holder.songCard.love_progress.visibility = View.VISIBLE
+                        } else {
+                            holder.songCard.ban_thumb.visibility = View.GONE
+                            holder.songCard.ban_progress.visibility = View.VISIBLE
+                        }
                     } else {
-                        RatingCompat.newThumbRating(false)
-                    },
-                    bundleOf(
-                        "songIndex" to holder.adapterPosition
-                    )
-                )
-            }
+                        holder.songCard.ban_progress.visibility = View.GONE
+                        holder.songCard.love_progress.visibility = View.GONE
+                        holder.songCard.ban_thumb.visibility = View.VISIBLE
+                        holder.songCard.love_thumb.visibility = View.VISIBLE
+                    }
+                }
 
-            holder.songCard.love_thumb.setOnClickListener {
-                it.visibility = View.GONE
-                holder.songCard.love_progress.visibility = View.VISIBLE
-                mediaController!!.transportControls.setRating(
-                    if (holder.queueItemDescription.extras!!.getParcelable<RatingCompat>("rating")!!.isRated && holder.queueItemDescription.extras!!.getParcelable<RatingCompat>("rating")!!.isThumbUp) {
-                        RatingCompat.newUnratedRating(RatingCompat.RATING_THUMB_UP_DOWN)
-                    } else {
-                        RatingCompat.newThumbRating(true)
-                    },
-                    bundleOf(
-                        "songIndex" to holder.adapterPosition
+                holder.songCard.ban_thumb.setOnClickListener {
+                    it.visibility = View.GONE
+                    holder.songCard.ban_progress.visibility = View.VISIBLE
+                    mediaController!!.transportControls.setRating(
+                        if (holder.queueItemDescription.extras!!.getParcelable<RatingCompat>("rating")!!.isRated && !holder.queueItemDescription.extras!!.getParcelable<RatingCompat>("rating")!!.isThumbUp) {
+                            RatingCompat.newUnratedRating(RatingCompat.RATING_THUMB_UP_DOWN)
+                        } else {
+                            RatingCompat.newThumbRating(false)
+                        },
+                        bundleOf(
+                            "songIndex" to holder.adapterPosition
+                        )
                     )
-                )
-            }
+                }
+
+                holder.songCard.love_thumb.setOnClickListener {
+                    it.visibility = View.GONE
+                    holder.songCard.love_progress.visibility = View.VISIBLE
+                    mediaController!!.transportControls.setRating(
+                        if (holder.queueItemDescription.extras!!.getParcelable<RatingCompat>("rating")!!.isRated && holder.queueItemDescription.extras!!.getParcelable<RatingCompat>("rating")!!.isThumbUp) {
+                            RatingCompat.newUnratedRating(RatingCompat.RATING_THUMB_UP_DOWN)
+                        } else {
+                            RatingCompat.newThumbRating(true)
+                        },
+                        bundleOf(
+                            "songIndex" to holder.adapterPosition
+                        )
+                    )
+                }
+            } catch (e: IndexOutOfBoundsException) {}
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: List<Any>) {
@@ -353,14 +360,6 @@ class PlaylistFragment : Fragment() {
                     }
                     else textColorInactive
                 )
-            }
-        }
-    }
-
-    private val broadcastReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            if (intent.getSerializableExtra("error") == MusicServiceResults.REQUEST_STOP_MUSIC) {
-                findNavController().popBackStack(R.id.stationListFragment, false)
             }
         }
     }

@@ -6,14 +6,51 @@ import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.findNavController
 import androidx.navigation.ui.NavigationUI
+import androidx.navigation.ui.setupWithNavController
+import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.dialogs.showNetworkErrorDialog
 import tk.hacker1024.epimetheus.dialogs.showPandoraErrorDialog
 import tk.hacker1024.epimetheus.service.MusicService
 import tk.hacker1024.epimetheus.service.MusicServiceResults
+import tk.hacker1024.epimetheus.service.RESULTS_BROADCAST_FILTER
+import tk.hacker1024.libepimetheus.Stations
+import tk.hacker1024.libepimetheus.User
+import tk.hacker1024.libepimetheus.data.Station
+import java.io.IOException
 
 // TODO manage audio focus
+
+internal class PandoraViewModel : ViewModel() {
+    private lateinit var _stationList: MutableLiveData<ArrayList<Station>?>
+    internal lateinit var user: User
+    internal val stationList: MutableLiveData<ArrayList<Station>?>
+        get() {
+            if (!::_stationList.isInitialized) {
+                _stationList = MutableLiveData()
+                loadStations()
+            }
+            return _stationList
+        }
+
+    internal fun loadStations() {
+        GlobalScope.launch  {
+            stationList.postValue(
+                try {
+                    ArrayList(Stations.getStations(user))
+                } catch (e: IOException) {
+                    null
+                }
+            )
+        }
+    }
+}
 
 class MainActivity : AppCompatActivity() {
     internal lateinit var mediaBrowser: MediaBrowserCompat
@@ -24,13 +61,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        setSupportActionBar(toolbar)
+        navigation_view.setupWithNavController(findNavController(R.id.nav_host_fragment))
         NavigationUI.setupActionBarWithNavController(this, findNavController(R.id.nav_host_fragment))
 
-        registerReceiver(
+        LocalBroadcastManager.getInstance(this).registerReceiver(
             appBroadcastReceiver,
-            IntentFilter("tk.superl2.epimetheus.serviceStateChange"),
-            "tk.superl2.epimetheus.HANDLE_MUSIC_SERVICE_EVENTS",
-            null
+            IntentFilter(RESULTS_BROADCAST_FILTER)
         )
 
         mediaBrowser = MediaBrowserCompat(
@@ -53,7 +90,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterReceiver(appBroadcastReceiver)
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(appBroadcastReceiver)
         mediaBrowser.disconnect()
     }
 
@@ -75,7 +112,7 @@ class MainActivity : AppCompatActivity() {
                 MediaControllerCompat(this@MainActivity, mediaBrowser.sessionToken)
             )
             runOnConnect?.invoke()
-            runOnConnect == null
+            runOnConnect = null
         }
 
         override fun onConnectionSuspended() {
@@ -97,6 +134,12 @@ class MainActivity : AppCompatActivity() {
                 MusicServiceResults.REQUEST_CLOSE_APP -> {
                     MediaControllerCompat.getMediaController(this@MainActivity).transportControls.stop()
                     finishAndRemoveTask()
+                }
+
+                MusicServiceResults.REQUEST_STOP_MUSIC -> {
+                    if (findNavController(R.id.nav_host_fragment).currentDestination!!.id == R.id.playlistFragment) {
+                        findNavController(R.id.nav_host_fragment).navigateUp()
+                    }
                 }
 
                 MusicServiceResults.ERROR_NETWORK, MusicServiceResults.ERROR_INTERNAL -> networkError()
