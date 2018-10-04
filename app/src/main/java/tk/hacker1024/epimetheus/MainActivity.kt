@@ -97,15 +97,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            android.R.id.home -> {
-                if (findNavController(R.id.nav_host_fragment).currentDestination!!.id == R.id.stationListFragment) {
-                    drawer_layout.openDrawer(GravityCompat.START)
-                    true
-                } else super.onOptionsItemSelected(item)
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
+        return if (findNavController(R.id.nav_host_fragment).currentDestination!!.id == R.id.stationListFragment && item.itemId == android.R.id.home) {
+            drawer_layout.openDrawer(GravityCompat.START)
+            true
+        } else super.onOptionsItemSelected(item)
     }
 
     internal fun connectMediaBrowser(runOnConnect: (() -> Unit)? = null) {
