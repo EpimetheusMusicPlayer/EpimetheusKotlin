@@ -10,6 +10,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.findNavController
@@ -96,6 +98,7 @@ class LoginFragment : Fragment() {
                             LoginFragmentDirections.actionLoginFragmentToStationListFragment()
                         )
                         NavigationUI.setupActionBarWithNavController(requireActivity() as AppCompatActivity, findNavController(), requireActivity().drawer_layout)
+                        requireActivity().drawer_layout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.START)
                     }
                 }
             } catch (ioException: IOException) {

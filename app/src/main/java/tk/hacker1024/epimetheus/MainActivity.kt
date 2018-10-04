@@ -5,13 +5,17 @@ import android.media.AudioManager
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
+import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.findNavController
 import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.setupWithNavController
+import com.google.android.material.navigation.NavigationView
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -63,6 +67,7 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(toolbar)
         navigation_view.setupWithNavController(findNavController(R.id.nav_host_fragment))
+        drawer_layout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START)
         NavigationUI.setupActionBarWithNavController(this, findNavController(R.id.nav_host_fragment))
 
         LocalBroadcastManager.getInstance(this).registerReceiver(
@@ -92,6 +97,18 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(appBroadcastReceiver)
         mediaBrowser.disconnect()
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            android.R.id.home -> {
+                if (findNavController(R.id.nav_host_fragment).currentDestination!!.id == R.id.stationListFragment) {
+                    drawer_layout.openDrawer(GravityCompat.START)
+                    true
+                } else super.onOptionsItemSelected(item)
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     internal fun connectMediaBrowser(runOnConnect: (() -> Unit)? = null) {
