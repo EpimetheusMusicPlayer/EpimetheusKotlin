@@ -395,7 +395,7 @@ internal class MusicService : MediaBrowserServiceCompat() {
         } catch (e: IOException) {
             stop(MusicServiceResults.ERROR_NETWORK)
         } catch (p: PandoraException) {
-            stop(MusicServiceResults.ERROR_PANDORA.apply { message = p.message ?: "No message" })
+            stop(MusicServiceResults.ERROR_PANDORA.apply { message = p.message })
         }
     }
 
