@@ -87,9 +87,7 @@ class PlaylistFragment : Fragment() {
     }
 
     private val controllerCallback = object : MediaControllerCompat.Callback() {
-        private fun updateOldQueue() {
-            cachedQueue = mediaController!!.queue
-        }
+        private var oldQueue: List<MediaSessionCompat.QueueItem> = emptyList()
 
         override fun onQueueChanged(queue: MutableList<MediaSessionCompat.QueueItem>) {
             if (queue.size == 0) {
@@ -104,21 +102,21 @@ class PlaylistFragment : Fragment() {
                     infix fun RatingCompat.sameAs(other: RatingCompat) = this.isRated == other.isRated && this.isThumbUp == other.isThumbUp
 
                     override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int) =
-                        cachedQueue[oldItemPosition].description.iconUri == queue[newItemPosition].description.iconUri &&
-                        cachedQueue[oldItemPosition].description.extras!!.getParcelable<RatingCompat>("rating")!! sameAs queue[newItemPosition].description.extras!!.getParcelable("rating")!! &&
-                        cachedQueue[oldItemPosition].description.extras!!.getParcelable<RatingCompat>("settingFeedback")!! sameAs queue[newItemPosition].description.extras!!.getParcelable("settingFeedback")!!
+                        oldQueue[oldItemPosition].description.iconUri == queue[newItemPosition].description.iconUri &&
+                        oldQueue[oldItemPosition].description.extras!!.getParcelable<RatingCompat>("rating")!! sameAs queue[newItemPosition].description.extras!!.getParcelable("rating")!! &&
+                        oldQueue[oldItemPosition].description.extras!!.getParcelable<RatingCompat>("settingFeedback")!! sameAs queue[newItemPosition].description.extras!!.getParcelable("settingFeedback")!!
 
                     override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int) =
-                        cachedQueue[oldItemPosition].description.title == queue[newItemPosition].description.title &&
-                        cachedQueue[oldItemPosition].description.description == queue[newItemPosition].description.description &&
-                        cachedQueue[oldItemPosition].description.subtitle == queue[newItemPosition].description.subtitle
+                        oldQueue[oldItemPosition].description.title == queue[newItemPosition].description.title &&
+                        oldQueue[oldItemPosition].description.description == queue[newItemPosition].description.description &&
+                        oldQueue[oldItemPosition].description.subtitle == queue[newItemPosition].description.subtitle
 
                     override fun getChangePayload(oldItemPosition: Int, newItemPosition: Int): Map<String, Boolean> {
                         return mapOf(
-                            "art" to (cachedQueue[oldItemPosition].description?.iconUri != queue[newItemPosition].description.iconUri),
+                            "art" to (oldQueue[oldItemPosition].description?.iconUri != queue[newItemPosition].description.iconUri),
                             "rating" to (
-                                !(cachedQueue[oldItemPosition].description.extras!!.getParcelable<RatingCompat>("rating")!! sameAs queue[newItemPosition].description.extras!!.getParcelable("rating")!!) ||
-                                !(cachedQueue[oldItemPosition].description.extras!!.getParcelable<RatingCompat>("settingFeedback")!! sameAs queue[newItemPosition].description.extras!!.getParcelable("settingFeedback")!!)
+                                !(oldQueue[oldItemPosition].description.extras!!.getParcelable<RatingCompat>("rating")!! sameAs queue[newItemPosition].description.extras!!.getParcelable("rating")!!) ||
+                                !(oldQueue[oldItemPosition].description.extras!!.getParcelable<RatingCompat>("settingFeedback")!! sameAs queue[newItemPosition].description.extras!!.getParcelable("settingFeedback")!!)
                             )
                         )
                     }
@@ -130,8 +128,9 @@ class PlaylistFragment : Fragment() {
                 false
             ).apply {
                 view?.song_list?.adapter.also {
-                    updateOldQueue()
+                    cachedQueue = queue
                     if (it != null) dispatchUpdatesTo(it)
+                    oldQueue = queue
                     song_list.findViewHolderForAdapterPosition(0)?.apply {
                         (it as SongRecyclerAdapter).colorSong(
                             (this as ViewHolder).songCard,
