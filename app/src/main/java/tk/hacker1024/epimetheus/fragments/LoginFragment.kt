@@ -92,10 +92,9 @@ class LoginFragment : Fragment() {
                 activity!!.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
                 findNavController().apply {
                     graph.startDestination = R.id.stationListFragment
-                    ViewModelProviders.of(requireActivity() as MainActivity)[PandoraViewModel::class.java].user = user
                     requireActivity().runOnUiThread {
                         navigate(
-                            LoginFragmentDirections.actionLoginFragmentToStationListFragment()
+                            LoginFragmentDirections.actionLoginFragmentToStationListFragment().setUser(user)
                         )
                         NavigationUI.setupActionBarWithNavController(requireActivity() as AppCompatActivity, findNavController(), requireActivity().drawer_layout)
                         requireActivity().drawer_layout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.START)

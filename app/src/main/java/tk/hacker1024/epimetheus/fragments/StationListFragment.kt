@@ -21,11 +21,13 @@ import org.json.JSONException
 import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.PandoraViewModel
 import tk.hacker1024.epimetheus.R
+import tk.hacker1024.libepimetheus.User
 
 //TODO dont load every time, use activity viewmodel
 
 class StationListFragment : Fragment() {
     private lateinit var viewModel: PandoraViewModel
+    private lateinit var user: User
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,7 +37,14 @@ class StationListFragment : Fragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        viewModel.stationList.observe(this, Observer {
+        StationListFragmentArgs.fromBundle(arguments).user?.also {
+            findNavController().currentDestination!!.setDefaultArguments(
+                Bundle().apply { putParcelable("user", it) }
+            )
+            user = it
+        }
+
+        viewModel.getStationList(user).observe(this, Observer {
             if (it != null) {
                 view?.recyclerview_station_list?.adapter?.notifyDataSetChanged()
                 view?.recyclerview_station_list?.visibility = View.VISIBLE
@@ -59,7 +68,7 @@ class StationListFragment : Fragment() {
             } else {
                 (requireActivity() as MainActivity).networkError {
                     view?.recyclerview_station_list?.visibility = View.INVISIBLE
-                    viewModel.loadStations()
+                    viewModel.loadStations(user)
                 }
             }
         })
@@ -70,7 +79,7 @@ class StationListFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         view.station_list_swipe_refresh_layout.setOnRefreshListener {
             view.recyclerview_station_list?.visibility = View.INVISIBLE
-            viewModel.loadStations()
+            viewModel.loadStations(user)
         }
 
         view.recyclerview_station_list.apply {
@@ -85,7 +94,7 @@ class StationListFragment : Fragment() {
 
         if (view?.station_list_swipe_refresh_layout?.isRefreshing == true) {
             view?.recyclerview_station_list?.visibility = View.INVISIBLE
-            viewModel.loadStations()
+            viewModel.loadStations(user)
         }
     }
 
@@ -103,12 +112,12 @@ class StationListFragment : Fragment() {
         // TODO maybe I should make the Shuffle station stand out more...
         override fun onBindViewHolder(holder: StationListAdapterViewHolder, position: Int) {
             // Bind the station name
-            holder.card.station_name.text = viewModel.stationList.value!![holder.adapterPosition].name
+            holder.card.station_name.text = viewModel.getStationList(user).value!![holder.adapterPosition].name
 
             // Bind the station art
             Picasso.get()
                 .run {
-                    viewModel.stationList.value!![holder.adapterPosition].getArtUrl(500).let { artUrl ->
+                    viewModel.getStationList(user).value!![holder.adapterPosition].getArtUrl(500).let { artUrl ->
                         if (artUrl != null) {
                             load(artUrl)
                         } else {
@@ -127,13 +136,16 @@ class StationListFragment : Fragment() {
 
             holder.card.setOnClickListener {
                 findNavController().navigate(
-                    StationListFragmentDirections
-                        .openAndPlayStationPlaylist()
-                        .setStationIndex(holder.adapterPosition)
+                    R.id.playlistFragment,
+                    bundleOf (
+                        "user" to user,
+                        "stations" to viewModel.getStationList(user).value,
+                        "stationIndex" to holder.adapterPosition
+                    )
                 )
             }
         }
 
-        override fun getItemCount() = viewModel.stationList.value?.size ?: 0
+        override fun getItemCount() = viewModel.getStationList(user).value?.size ?: 0
     }
 }

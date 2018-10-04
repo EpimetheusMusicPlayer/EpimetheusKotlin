@@ -18,7 +18,6 @@ import androidx.annotation.ColorInt
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -28,9 +27,9 @@ import kotlinx.android.synthetic.main.fragment_playlist.*
 import kotlinx.android.synthetic.main.fragment_playlist.view.*
 import kotlinx.android.synthetic.main.song_card_inactive.view.*
 import tk.hacker1024.epimetheus.MainActivity
-import tk.hacker1024.epimetheus.PandoraViewModel
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.service.MusicService
+import tk.hacker1024.libepimetheus.User
 
 // TODO BUG: When switching to another station without stopping the old station, the loading widget won't show; the screen will be blank until it loads.
 
@@ -41,13 +40,20 @@ class PlaylistFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (PlaylistFragmentArgs.fromBundle(arguments).stationIndex != -1) {
+        if (arguments!!.getInt("stationIndex") != -1) {
+            findNavController().currentDestination!!.setDefaultArguments(
+                bundleOf(
+                    "user" to arguments!!.getParcelable<User>("user"),
+                    "stationIndex" to -1,
+                    "stations" to null
+                )
+            )
             ContextCompat.startForegroundService(
                 requireContext(),
                 Intent(context, MusicService::class.java)
-                    .putExtra("pandoraUserObject", ViewModelProviders.of(requireActivity())[PandoraViewModel::class.java].user)
-                    .putExtra("stationIndex", PlaylistFragmentArgs.fromBundle(arguments).stationIndex)
-                    .putParcelableArrayListExtra("stations", ViewModelProviders.of(requireActivity())[PandoraViewModel::class.java].stationList.value!!)
+                    .putExtra("pandoraUserObject", arguments!!.getParcelable<User>("user"))
+                    .putExtra("stationIndex", arguments!!.getInt("stationIndex"))
+                    .putParcelableArrayListExtra("stations", arguments!!.getParcelableArrayList("stations"))
             )
         }
     }
@@ -56,7 +62,7 @@ class PlaylistFragment : Fragment() {
         inflater.inflate(R.layout.fragment_playlist, container, false)!!
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        if (PlaylistFragmentArgs.fromBundle(arguments).stationIndex == -1 && !MediaControlFragment.isServiceRunning(requireContext())) {
+        if (arguments!!.getInt("stationIndex") == -1 && !MediaControlFragment.isServiceRunning(requireContext())) {
             view.loading_widget.visibility = View.GONE
             view.empty.visibility = View.VISIBLE
             view.empty.setOnClickListener {
@@ -73,7 +79,7 @@ class PlaylistFragment : Fragment() {
     override fun onStart() {
         super.onStart()
 
-        if (PlaylistFragmentArgs.fromBundle(arguments).stationIndex == -1) {
+        if (arguments!!.getInt("stationIndex") == -1) {
             (childFragmentManager.findFragmentById(R.id.fragment_media_control) as MediaControlFragment).showIfServiceRunning()
         } else {
             (childFragmentManager.findFragmentById(R.id.fragment_media_control) as MediaControlFragment).show()

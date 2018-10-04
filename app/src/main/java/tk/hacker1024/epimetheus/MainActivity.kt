@@ -15,7 +15,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.findNavController
 import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.setupWithNavController
-import com.google.android.material.navigation.NavigationView
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -32,18 +31,16 @@ import java.io.IOException
 // TODO manage audio focus
 
 internal class PandoraViewModel : ViewModel() {
-    private lateinit var _stationList: MutableLiveData<ArrayList<Station>?>
-    internal lateinit var user: User
-    internal val stationList: MutableLiveData<ArrayList<Station>?>
-        get() {
-            if (!::_stationList.isInitialized) {
-                _stationList = MutableLiveData()
-                loadStations()
-            }
-            return _stationList
+    private lateinit var stationList: MutableLiveData<ArrayList<Station>?>
+    internal fun getStationList(user: User): MutableLiveData<ArrayList<Station>?> {
+        if (!::stationList.isInitialized) {
+            stationList = MutableLiveData()
+            loadStations(user)
         }
+        return stationList
+    }
 
-    internal fun loadStations() {
+    internal fun loadStations(user: User) {
         GlobalScope.launch  {
             stationList.postValue(
                 try {

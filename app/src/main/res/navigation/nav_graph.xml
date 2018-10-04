@@ -22,6 +22,11 @@
         <action
             android:id="@+id/action_stationListFragment_to_browseFragment"
             app:destination="@id/browseFragment" />
+        <argument
+            android:name="user"
+            app:argType="tk.hacker1024.libepimetheus.User"
+            app:nullable="true"
+            android:defaultValue="@null" />
     </fragment>
     <fragment
         android:id="@+id/playlistFragment"
@@ -32,6 +37,14 @@
             android:name="stationIndex"
             app:argType="integer"
             android:defaultValue="-1" />
+        <argument
+            android:name="stations"
+            android:defaultValue="@null" />
+        <argument
+            android:name="user"
+            app:argType="tk.hacker1024.libepimetheus.User"
+            app:nullable="true"
+            android:defaultValue="@null" />
     </fragment>
     <fragment
         android:id="@+id/loginFragment"
