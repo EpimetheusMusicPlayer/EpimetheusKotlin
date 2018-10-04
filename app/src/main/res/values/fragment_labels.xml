@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fragment_label_station_list">My Stations</string>
+    <string name="fragment_label_playlist">Now Playing</string>
+    <string name="fragment_label_login">Sign in</string>
+    <string name="fragment_label_register">Sign up</string>
+</resources>

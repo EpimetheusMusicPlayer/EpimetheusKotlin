@@ -1,0 +1,3 @@
+[submodule "libepimetheus"]
+	path = libepimetheus
+	url = https://github.com/EpimetheusAndroid/libepimetheus
