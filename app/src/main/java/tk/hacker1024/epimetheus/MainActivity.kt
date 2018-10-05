@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.view.MenuItem
+import android.widget.PopupMenu
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
@@ -16,10 +17,12 @@ import androidx.navigation.findNavController
 import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.setupWithNavController
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.activity_main.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.dialogs.showNetworkErrorDialog
 import tk.hacker1024.epimetheus.dialogs.showPandoraErrorDialog
+import tk.hacker1024.epimetheus.fragments.AUTH_SHARED_PREFS_NAME
 import tk.hacker1024.epimetheus.service.MusicService
 import tk.hacker1024.epimetheus.service.MusicServiceResults
 import tk.hacker1024.epimetheus.service.RESULTS_BROADCAST_FILTER
@@ -66,6 +69,24 @@ class MainActivity : AppCompatActivity() {
         navigation_view.setupWithNavController(findNavController(R.id.nav_host_fragment))
         drawer_layout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START)
         NavigationUI.setupActionBarWithNavController(this, findNavController(R.id.nav_host_fragment))
+
+        drawer_layout.navigation_view.getHeaderView(0).setOnClickListener {
+            PopupMenu(this, it).apply {
+                setOnMenuItemClickListener { menuItem ->
+                    when (menuItem.itemId) {
+                        R.id.logout -> {
+                            getSharedPreferences(AUTH_SHARED_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().apply()
+                            finish()
+                            startActivity(Intent(this@MainActivity, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION))
+                            true
+                        }
+                        else -> false
+                    }
+                }
+                inflate(R.menu.account_menu)
+                show()
+            }
+        }
 
         LocalBroadcastManager.getInstance(this).registerReceiver(
             appBroadcastReceiver,

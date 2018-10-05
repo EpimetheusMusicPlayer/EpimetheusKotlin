@@ -36,7 +36,7 @@ import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 
-private const val AUTH_SHARED_PREFS_NAME = "user"
+internal const val AUTH_SHARED_PREFS_NAME = "user"
 private const val EMAIL_KEY = "email"
 private const val PASSWORD_KEY = "password"
 

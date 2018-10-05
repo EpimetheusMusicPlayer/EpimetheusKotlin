@@ -53,7 +53,6 @@
         tools:layout="@layout/fragment_login">
         <action
             android:id="@+id/action_loginFragment_to_stationListFragment"
-            app:clearTask="true"
             app:destination="@id/stationListFragment"
             app:enterAnim="@anim/nav_default_enter_anim"
             app:exitAnim="@anim/nav_default_exit_anim"
