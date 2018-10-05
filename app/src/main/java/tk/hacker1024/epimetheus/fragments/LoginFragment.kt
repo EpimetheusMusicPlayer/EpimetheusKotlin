@@ -13,6 +13,7 @@ import androidx.core.content.edit
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.NavigationUI
 import com.squareup.picasso.Picasso
@@ -24,6 +25,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.MainActivity
+import tk.hacker1024.epimetheus.PandoraViewModel
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.dialogs.showLocationErrorDialog
 import tk.hacker1024.epimetheus.dialogs.showNetworkErrorDialog
@@ -95,15 +97,13 @@ class LoginFragment : Fragment() {
                         navigate(
                             LoginFragmentDirections.actionLoginFragmentToStationListFragment().setUser(user)
                         )
-                        requireActivity().apply {
-                            this.userName.text = user.username
-                            this.userEmail.text = user.email
-                            Picasso
-                                .get()
-                                .load(user.profilePicUri)
-                                .placeholder(R.drawable.ic_generic_album_art)
-                                .into(this.userPicture)
-                        }
+                        ViewModelProviders.of(requireActivity())[PandoraViewModel::class.java].userDetails.postValue(
+                            hashMapOf(
+                                "username" to user.username,
+                                "email" to user.email,
+                                "profilePicUri" to user.profilePicUri
+                            )
+                        )
                         NavigationUI.setupActionBarWithNavController(requireActivity() as AppCompatActivity, findNavController(), requireActivity().drawer_layout)
                         requireActivity().drawer_layout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.START)
                     }

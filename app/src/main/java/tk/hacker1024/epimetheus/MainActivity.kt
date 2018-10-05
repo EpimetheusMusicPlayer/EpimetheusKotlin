@@ -2,6 +2,7 @@ package tk.hacker1024.epimetheus
 
 import android.content.*
 import android.media.AudioManager
+import android.net.Uri
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
@@ -11,13 +12,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProviders
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.findNavController
 import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.setupWithNavController
+import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.activity_main.view.*
+import kotlinx.android.synthetic.main.nav_header.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.dialogs.showNetworkErrorDialog
@@ -34,6 +39,8 @@ import java.io.IOException
 // TODO manage audio focus
 
 internal class PandoraViewModel : ViewModel() {
+    internal var userDetails = MutableLiveData<HashMap<String, Any>>()
+
     private lateinit var stationList: MutableLiveData<ArrayList<Station>?>
     internal fun getStationList(user: User): MutableLiveData<ArrayList<Station>?> {
         if (!::stationList.isInitialized) {
@@ -69,6 +76,16 @@ class MainActivity : AppCompatActivity() {
         navigation_view.setupWithNavController(findNavController(R.id.nav_host_fragment))
         drawer_layout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START)
         NavigationUI.setupActionBarWithNavController(this, findNavController(R.id.nav_host_fragment))
+
+        ViewModelProviders.of(this)[PandoraViewModel::class.java].userDetails.observe(this, Observer {
+            userName.text = it["username"] as String
+            userEmail.text = it["email"] as String
+            Picasso
+                .get()
+                .load(it["profilePicUri"] as Uri)
+                .placeholder(R.drawable.ic_generic_album_art)
+                .into(userPicture)
+        })
 
         drawer_layout.navigation_view.getHeaderView(0).setOnClickListener {
             PopupMenu(this, it).apply {
