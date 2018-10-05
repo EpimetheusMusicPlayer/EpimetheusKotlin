@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.get
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -40,8 +41,10 @@ class PlaylistFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        println(arguments!!.getInt("stationIndex"))
+
         if (arguments!!.getInt("stationIndex") != -1) {
-            findNavController().currentDestination!!.setDefaultArguments(
+            findNavController().graph[R.id.playlistFragment].setDefaultArguments(
                 bundleOf(
                     "user" to arguments!!.getParcelable<User>("user"),
                     "stationIndex" to -1,

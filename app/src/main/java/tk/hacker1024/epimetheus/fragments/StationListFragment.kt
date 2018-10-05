@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.get
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -38,7 +39,7 @@ class StationListFragment : Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         StationListFragmentArgs.fromBundle(arguments).user?.also {
-            findNavController().currentDestination!!.setDefaultArguments(
+            findNavController().graph[R.id.stationListFragment].setDefaultArguments(
                 Bundle().apply { putParcelable("user", it) }
             )
             user = it
