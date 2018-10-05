@@ -3,31 +3,31 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:minHeight="64dp"
-    android:paddingTop="4dp"
-    android:paddingBottom="4dp"
-    android:paddingLeft="12dp"
-    android:paddingRight="12dp"
+    android:background="?android:attr/selectableItemBackground"
     android:orientation="horizontal"
-    android:background="?android:attr/selectableItemBackground">
+    android:paddingLeft="16dp"
+    android:paddingTop="4dp"
+    android:paddingRight="16dp"
+    android:paddingBottom="4dp">
 
     <ImageView
         android:id="@+id/station_logo"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
         android:layout_weight="0"
         android:adjustViewBounds="true"
-        android:contentDescription="@string/album_cover" />
+        android:contentDescription="@string/album_cover"
+        tools:srcCompat="@drawable/ic_generic_album_art_rounded" />
 
     <TextView
         android:id="@+id/station_name"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
         android:layout_weight="1"
         android:paddingStart="16dp"
         android:paddingEnd="4dp"
         android:scrollHorizontally="false"
-        android:gravity="center_vertical"
         android:textAppearance="@android:style/TextAppearance.DeviceDefault.Large"
         tools:text="Station" />
 
