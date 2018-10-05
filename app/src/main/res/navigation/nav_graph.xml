@@ -85,7 +85,7 @@
     <fragment
         android:id="@+id/settingsFragment"
         android:name="tk.hacker1024.epimetheus.fragments.SettingsFragment"
-        android:label="fragment_settings"
+        android:label="@string/fragment_label_settings"
         tools:layout="@layout/fragment_settings" />
     <fragment
         android:id="@+id/browseFragment"

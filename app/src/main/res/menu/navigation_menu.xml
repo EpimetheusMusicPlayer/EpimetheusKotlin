@@ -10,4 +10,10 @@
             android:icon="@drawable/ic_queue_24dp"
             android:title="@string/fragment_label_playlist" />
     </group>
+    <group android:id="@+id/settings">
+        <item
+            android:id="@+id/settingsFragment"
+            android:icon="@drawable/ic_settings_black_24dp"
+            android:title="@string/fragment_label_settings" />
+    </group>
 </menu>
