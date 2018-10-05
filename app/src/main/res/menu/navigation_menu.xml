@@ -7,7 +7,7 @@
             android:title="@string/fragment_label_station_list" />
         <item
             android:id="@+id/playlistFragment"
-            android:icon="@drawable/ic_play_arrow_black_24dp"
+            android:icon="@drawable/ic_queue_24dp"
             android:title="@string/fragment_label_playlist" />
     </group>
 </menu>
