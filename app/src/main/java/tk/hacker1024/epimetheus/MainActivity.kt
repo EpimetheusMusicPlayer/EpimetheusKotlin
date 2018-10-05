@@ -6,7 +6,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
-import android.view.MenuItem
 import android.widget.PopupMenu
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
@@ -18,6 +17,7 @@ import androidx.lifecycle.ViewModelProviders
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.findNavController
 import androidx.navigation.ui.NavigationUI
+import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupWithNavController
 import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.activity_main.*
@@ -66,7 +66,7 @@ internal class PandoraViewModel : ViewModel() {
 class MainActivity : AppCompatActivity() {
     internal lateinit var mediaBrowser: MediaBrowserCompat
 
-    override fun onSupportNavigateUp() = findNavController(R.id.nav_host_fragment).navigateUp()
+    override fun onSupportNavigateUp() = drawer_layout.navigateUp(findNavController(R.id.nav_host_fragment))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -139,13 +139,6 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(appBroadcastReceiver)
         mediaBrowser.disconnect()
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return if (findNavController(R.id.nav_host_fragment).currentDestination!!.id == R.id.stationListFragment && item.itemId == android.R.id.home) {
-            drawer_layout.openDrawer(GravityCompat.START)
-            true
-        } else super.onOptionsItemSelected(item)
     }
 
     internal fun connectMediaBrowser(runOnConnect: (() -> Unit)? = null) {
