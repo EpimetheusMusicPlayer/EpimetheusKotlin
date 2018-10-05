@@ -6,8 +6,9 @@ import android.net.Uri
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
-import android.widget.PopupMenu
+import android.view.Menu
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.MutableLiveData
@@ -92,16 +93,7 @@ class MainActivity : AppCompatActivity() {
                 setOnMenuItemClickListener { menuItem ->
                     when (menuItem.itemId) {
                         R.id.logout -> {
-                            getSharedPreferences(AUTH_SHARED_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().apply()
-                            finish()
-                            startActivity(
-                                Intent(this@MainActivity, MainActivity::class.java)
-                                    .addFlags(
-                                        Intent.FLAG_ACTIVITY_NO_ANIMATION or
-                                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                                        Intent.FLAG_ACTIVITY_NEW_TASK
-                                    )
-                            )
+                            logout()
                             true
                         }
                         else -> false
@@ -233,5 +225,18 @@ class MainActivity : AppCompatActivity() {
                 popBackStack(R.id.stationListFragment, false)
             }
         }
+    }
+
+    internal fun logout() {
+        getSharedPreferences(AUTH_SHARED_PREFS_NAME, MODE_PRIVATE).edit().clear().apply()
+        finish()
+        startActivity(
+            Intent(this@MainActivity, MainActivity::class.java)
+                .addFlags(
+                    Intent.FLAG_ACTIVITY_NO_ANIMATION or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            Intent.FLAG_ACTIVITY_NEW_TASK
+                )
+        )
     }
 }

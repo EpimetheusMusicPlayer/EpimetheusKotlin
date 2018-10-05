@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="?android:attr/selectableItemBackground"
     android:orientation="horizontal"
     android:paddingLeft="16dp"
@@ -10,13 +11,15 @@
     android:paddingRight="16dp"
     android:paddingBottom="4dp">
 
-    <ImageView
+    <com.makeramen.roundedimageview.RoundedImageView
         android:id="@+id/station_logo"
         android:layout_width="56dp"
         android:layout_height="56dp"
         android:layout_weight="0"
         android:adjustViewBounds="true"
+        app:riv_corner_radius="3.6129032258dp"
         android:contentDescription="@string/album_cover"
+        android:scaleType="fitCenter"
         tools:srcCompat="@drawable/ic_generic_album_art_rounded" />
 
     <TextView

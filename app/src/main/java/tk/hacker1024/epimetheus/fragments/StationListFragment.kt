@@ -1,5 +1,8 @@
 package tk.hacker1024.epimetheus.fragments
 
+import android.animation.Animator
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,11 +14,12 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.get
+import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.squareup.picasso.Picasso
-import jp.wasabeef.picasso.transformations.RoundedCornersTransformation
+import com.squareup.picasso.Target
 import kotlinx.android.synthetic.main.fragment_station_list.view.*
 import kotlinx.android.synthetic.main.station_card.view.*
 import org.json.JSONException
@@ -23,12 +27,12 @@ import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.PandoraViewModel
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.libepimetheus.User
-
-//TODO dont load every time, use activity viewmodel
+import java.io.IOException
 
 class StationListFragment : Fragment() {
     private lateinit var viewModel: PandoraViewModel
     private lateinit var user: User
+    val artSize; get() = PreferenceManager.getDefaultSharedPreferences(requireContext()).getString("art_size", "500")!!.toInt()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,11 +59,11 @@ class StationListFragment : Fragment() {
                     for (stationListItem in it) {
                         Picasso.get()
                             .run {
-                                stationListItem.getArtUrl(130).let { artUrl ->
+                                stationListItem.getArtUrl(artSize).let { artUrl ->
                                     if (artUrl != null) {
                                         load(artUrl)
                                     } else {
-                                        load(R.drawable.ic_generic_album_art_rounded)
+                                        load(R.drawable.ic_generic_album_art)
                                     }
                                 }
                             }
@@ -118,21 +122,53 @@ class StationListFragment : Fragment() {
             // Bind the station art
             Picasso.get()
                 .run {
-                    viewModel.getStationList(user).value!![holder.adapterPosition].getArtUrl(500).let { artUrl ->
+                    viewModel.getStationList(user).value!![holder.adapterPosition].getArtUrl(
+                        if (viewModel.getStationList(user).value!![holder.adapterPosition].isShuffle) 500 else artSize
+                    ).let { artUrl ->
                         if (artUrl != null) {
                             load(artUrl)
                         } else {
-                            load(R.drawable.ic_generic_album_art_rounded)
+                            load(R.drawable.ic_generic_album_art)
                         }
                     }
                 }
+                .error(R.drawable.ic_generic_album_art)
                 // While the picture is downloading, show a music note icon
-                .placeholder(R.drawable.ic_generic_album_art_rounded)
-                // Apply rounded corners
-                .transform(RoundedCornersTransformation(25, 0))
+                .placeholder(R.drawable.ic_generic_album_art)
                 // Insert into the ImageView
                 .into(
-                    holder.card.station_logo
+                    object : Target {
+                        override fun onPrepareLoad(placeHolderDrawable: Drawable) {
+                            holder.card.station_logo.setImageDrawable(placeHolderDrawable)
+                        }
+
+                        override fun onBitmapLoaded(bitmap: Bitmap, from: Picasso.LoadedFrom) {
+                            holder.card.station_logo.apply {
+                                if (from != Picasso.LoadedFrom.MEMORY) {
+                                    animate().setDuration(200).alpha(0f).setListener(
+                                        object : Animator.AnimatorListener {
+                                            override fun onAnimationStart(animation: Animator?) {}
+                                            override fun onAnimationCancel(animation: Animator?) {}
+                                            override fun onAnimationRepeat(animation: Animator?) {}
+
+                                            override fun onAnimationEnd(animation: Animator?) {
+                                                setImageBitmap(bitmap)
+                                                animate().setDuration(200).alpha(1f).start()
+                                            }
+                                        }
+                                    ).start()
+                                } else {
+                                    setImageBitmap(bitmap)
+                                }
+                            }
+                        }
+
+                        override fun onBitmapFailed(e: Exception, errorDrawable: Drawable) {
+                            if (e is IOException) {
+                                (requireActivity() as MainActivity).networkError()
+                            }
+                        }
+                    }
                 )
 
             holder.card.setOnClickListener {

@@ -9,18 +9,20 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.edit
 import androidx.core.view.GravityCompat
+import androidx.core.view.get
+import androidx.core.widget.PopupWindowCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.NavigationUI
-import com.squareup.picasso.Picasso
+import androidx.preference.PreferenceManager
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fragment_login.*
 import kotlinx.android.synthetic.main.fragment_login.view.*
-import kotlinx.android.synthetic.main.nav_header.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -50,7 +52,7 @@ class LoginFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        activity!!.getSharedPreferences(AUTH_SHARED_PREFS_NAME, Context.MODE_PRIVATE).apply {
+        requireActivity().getSharedPreferences(AUTH_SHARED_PREFS_NAME, Context.MODE_PRIVATE).apply {
             if (contains(PASSWORD_KEY) && contains(EMAIL_KEY)) {
                 authenticate(
                     getString(EMAIL_KEY, null)!!,
@@ -64,6 +66,26 @@ class LoginFragment : Fragment() {
             }
             if (contains(PASSWORD_KEY)) {
                 view.password.setText(getString(PASSWORD_KEY, null))
+            }
+
+            view.menu.setOnClickListener {
+                PopupMenu(requireContext(), it, GravityCompat.END).apply {
+                    inflate(R.menu.login_menu)
+                    menu[0].isChecked = PreferenceManager.getDefaultSharedPreferences(requireContext()).getBoolean("use_portaller", false)
+                    setOnMenuItemClickListener { menuItem ->
+                        when (menuItem.itemId) {
+                            R.id.portaller_switch -> {
+                                menuItem.isChecked = !menuItem.isChecked
+                                PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
+                                    putBoolean("use_portaller", menuItem.isChecked)
+                                }
+                                true
+                            }
+                            else -> false
+                        }
+                    }
+                    show()
+                }
             }
 
             view.login.setOnClickListener {
@@ -85,7 +107,7 @@ class LoginFragment : Fragment() {
         toggleLoadingScreen(true)
         GlobalScope.launch {
             try {
-                user = User(email, password, true)
+                user = User(email, password, PreferenceManager.getDefaultSharedPreferences(requireContext()).getBoolean("use_portaller", false))
                 sharedPrefs?.edit(true) {
                     putString(EMAIL_KEY, email)
                     if (view!!.save_password.isChecked) putString(PASSWORD_KEY, password)
@@ -165,6 +187,7 @@ class LoginFragment : Fragment() {
             view!!.save_password.visibility = View.GONE
             view!!.login.visibility = View.GONE
             view!!.register.visibility = View.GONE
+            view!!.menu.visibility = View.GONE
             view!!.login_progress_bar.visibility = View.VISIBLE
             view!!.loading_text.visibility = View.VISIBLE
         } else {
@@ -175,6 +198,7 @@ class LoginFragment : Fragment() {
             view!!.save_password.visibility = View.VISIBLE
             view!!.login.visibility = View.VISIBLE
             view!!.register.visibility = View.VISIBLE
+            view!!.menu.visibility = View.VISIBLE
             requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
         }
     }

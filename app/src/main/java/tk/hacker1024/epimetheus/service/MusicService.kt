@@ -26,6 +26,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.app.NotificationCompat.MediaStyle
 import androidx.media.session.MediaButtonReceiver
+import androidx.preference.PreferenceManager
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.ext.mediasession.TimelineQueueNavigator
@@ -66,6 +67,8 @@ internal enum class MusicServiceResults(var message: String = "") {
 }
 
 internal class MusicService : MediaBrowserServiceCompat() {
+    // The album art size
+    val artSize; get() = PreferenceManager.getDefaultSharedPreferences(this).getString("art_size", "500")!!.toInt()
     // The thread of the media player
     private lateinit var mediaPlayerHandler: Handler
     // Notification builder - cached to save resources
@@ -104,7 +107,7 @@ internal class MusicService : MediaBrowserServiceCompat() {
                     // Download the album art in a background thread, and update the notification
                     try {
                         for (song in newSongs) {
-                            song.getArtUrl(ALBUM_ART_SIZE).also {
+                            song.getArtUrl(artSize).also {
                                 Picasso.get().load(it).fetch(
                                     object : Callback {
                                         override fun onSuccess() {
@@ -308,7 +311,7 @@ internal class MusicService : MediaBrowserServiceCompat() {
                                 .setMediaId(i.toString())
                                 .setTitle(stations[i].name)
                                 .setIconBitmap(
-                                    stations[i].getArtUrl(ALBUM_ART_SIZE).let { artUrl ->
+                                    stations[i].getArtUrl(artSize).let { artUrl ->
                                         try {
                                             Picasso
                                                 .get()
@@ -350,7 +353,7 @@ internal class MusicService : MediaBrowserServiceCompat() {
                         .setMediaId(itemId)
                         .setTitle(stations[itemId.toInt()].name)
                         .setIconBitmap(
-                            stations[itemId.toInt()].getArtUrl(ALBUM_ART_SIZE).let { artUrl ->
+                            stations[itemId.toInt()].getArtUrl(artSize).let { artUrl ->
                                 try {
                                     Picasso
                                         .get()
@@ -569,12 +572,12 @@ internal class MusicService : MediaBrowserServiceCompat() {
             return PlaybackStateCompat.ACTION_SKIP_TO_NEXT or PlaybackStateCompat.ACTION_SKIP_TO_QUEUE_ITEM
         }
 
-        private val placeholderBitmap = BitmapFactory.decodeResource(resources, R.drawable.ic_generic_album_art_rounded)!!
+        private val placeholderBitmap = BitmapFactory.decodeResource(resources, R.drawable.ic_generic_album_art)!!
         private val placeholderUri = Uri.Builder()
             .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
-            .authority(resources.getResourcePackageName(R.drawable.ic_generic_album_art_rounded))
-            .appendPath(resources.getResourceTypeName(R.drawable.ic_generic_album_art_rounded))
-            .appendPath(resources.getResourceEntryName(R.drawable.ic_generic_album_art_rounded))
+            .authority(resources.getResourcePackageName(R.drawable.ic_generic_album_art))
+            .appendPath(resources.getResourceTypeName(R.drawable.ic_generic_album_art))
+            .appendPath(resources.getResourceEntryName(R.drawable.ic_generic_album_art))
             .build()
         override fun getMediaDescription(player: Player, windowIndex: Int): MediaDescriptionCompat {
             return MediaDescriptionCompat.Builder()
@@ -610,7 +613,7 @@ internal class MusicService : MediaBrowserServiceCompat() {
 
                     GlobalScope.launch {
                         try {
-                            playlist[windowIndex].getArtUrl(ALBUM_ART_SIZE).also {
+                            playlist[windowIndex].getArtUrl(artSize).also {
                                 try {
                                     bitmap = Picasso.get()
                                         .load(it)

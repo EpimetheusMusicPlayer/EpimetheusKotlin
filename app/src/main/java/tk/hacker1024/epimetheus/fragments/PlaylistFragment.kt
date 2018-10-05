@@ -23,7 +23,6 @@ import androidx.navigation.get
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import jp.wasabeef.picasso.transformations.RoundedCornersTransformation
 import kotlinx.android.synthetic.main.fragment_playlist.*
 import kotlinx.android.synthetic.main.fragment_playlist.view.*
 import kotlinx.android.synthetic.main.song_card_inactive.view.*
@@ -205,9 +204,7 @@ class PlaylistFragment : Fragment() {
 
                 // Bind the album art
                 holder.songCard.song_album_art.setImageBitmap(
-                    RoundedCornersTransformation(25, 0).transform(
                         holder.queueItemDescription.iconBitmap
-                    )
                 )
 
                 // Skip to the song on click.
@@ -279,9 +276,7 @@ class PlaylistFragment : Fragment() {
                 (payloads[0] as Map<String, Boolean>).apply {
                     if (get("art") == true) {
                         holder.songCard.song_album_art.apply {
-                            val bitmap = RoundedCornersTransformation(25, 0).transform(
-                                mediaController!!.queue[holder.adapterPosition].description.iconBitmap
-                            )
+                            val bitmap = mediaController!!.queue[holder.adapterPosition].description.iconBitmap
                             animate().setDuration(200).alpha(0f).setListener(
                                 object : Animator.AnimatorListener {
                                     override fun onAnimationStart(animation: Animator?) {}

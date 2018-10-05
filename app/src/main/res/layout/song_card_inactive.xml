@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="?android:attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true"
@@ -14,14 +15,16 @@
     android:paddingRight="12dp"
     android:paddingBottom="6dp">
 
-    <ImageView
+    <com.makeramen.roundedimageview.RoundedImageView
         android:id="@+id/song_album_art"
         android:layout_width="wrap_content"
         android:layout_height="124dp"
         android:layout_weight="0"
+        android:scaleType="fitCenter"
+        app:riv_corner_radius="8dp"
         android:adjustViewBounds="true"
         android:contentDescription="@string/album_cover"
-        tools:src="@drawable/ic_generic_album_art_rounded" />
+        tools:src="@drawable/ic_generic_album_art" />
 
     <LinearLayout
         android:layout_width="match_parent"

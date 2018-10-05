@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="Network">
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="use_portaller"
+            android:summary="Use Portaller, a free smart DNS service, to access Pandora outside the US."
+            android:title="Use portaller" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Quality">
+        <ListPreference
+            android:defaultValue="500"
+            android:entries="@array/artSizesHumanReadable"
+            android:entryValues="@array/artSizes"
+            android:key="art_size"
+            android:summary="The size of the station and album art to get from Pandora."
+            android:title="Art size" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Account">
+        <Preference
+            android:key="logout"
+            android:summary="Sign out of Epimetheus."
+            android:title="@string/signout" />
+    </PreferenceCategory>
+</PreferenceScreen>

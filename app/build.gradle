@@ -44,6 +44,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.0.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.0-alpha2'
     implementation 'androidx.recyclerview:recyclerview:1.0.0'
+    implementation 'androidx.preference:preference:1.0.0'
     implementation 'androidx.media:media:1.0.0'
 
     def nav_version = "1.0.0-alpha06"
@@ -61,6 +62,5 @@ dependencies {
     implementation 'com.github.google:ExoPlayer:dev-v2-SNAPSHOT'
 
     implementation 'com.squareup.picasso:picasso:2.71828'
-    implementation 'jp.wasabeef:picasso-transformations:2.2.1'
-    implementation 'de.hdodenhof:circleimageview:2.2.0'
+    implementation 'com.makeramen:roundedimageview:2.3.0'
 }
