@@ -41,8 +41,6 @@ class PlaylistFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        println(arguments!!.getInt("stationIndex"))
-
         if (arguments!!.getInt("stationIndex") != -1) {
             findNavController().graph[R.id.playlistFragment].setDefaultArguments(
                 bundleOf(
