@@ -20,6 +20,7 @@ import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.NavigationUI
 import androidx.preference.PreferenceManager
+import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fragment_login.*
 import kotlinx.android.synthetic.main.fragment_login.view.*
@@ -31,6 +32,7 @@ import tk.hacker1024.epimetheus.PandoraViewModel
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.dialogs.showLocationErrorDialog
 import tk.hacker1024.epimetheus.dialogs.showNetworkErrorDialog
+import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.InvalidLoginException
 import tk.hacker1024.libepimetheus.LocationException
 import tk.hacker1024.libepimetheus.PandoraException
@@ -107,6 +109,7 @@ class LoginFragment : Fragment() {
         toggleLoadingScreen(true)
         GlobalScope.launch {
             try {
+                Picasso.get().load(GENERIC_ART_URL).fetch()
                 user = User(email, password, PreferenceManager.getDefaultSharedPreferences(requireContext()).getBoolean("use_portaller", false))
                 sharedPrefs?.edit(true) {
                     putString(EMAIL_KEY, email)

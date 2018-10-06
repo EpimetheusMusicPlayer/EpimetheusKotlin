@@ -51,7 +51,7 @@ import tk.hacker1024.libepimetheus.data.Station
 import java.io.IOException
 import java.util.concurrent.CountDownLatch
 
-private const val ALBUM_ART_SIZE = 500
+internal const val GENERIC_ART_URL = "https://www.pandora.com/web-version/1.25.1/images/album_500.png"
 
 private const val LOG_TAG = "EpimetheusMediaService" // This tag is used for the media session
 private const val MEDIA_NOTIFICATION_CHANNEL_ID = "media" // This is the channel ID for the media notification
@@ -329,7 +329,10 @@ internal class MusicService : MediaBrowserServiceCompat() {
 
                                                     override fun onError(e: Exception) {}
                                                 })
-                                            BitmapFactory.decodeResource(resources, R.drawable.ic_generic_album_art)
+                                            Picasso
+                                                .get()
+                                                .load(GENERIC_ART_URL)
+                                                .get()
                                         }
                                     }
                                 )
@@ -371,7 +374,10 @@ internal class MusicService : MediaBrowserServiceCompat() {
 
                                             override fun onError(e: Exception) {}
                                         })
-                                    BitmapFactory.decodeResource(resources, R.drawable.ic_generic_album_art)
+                                    Picasso
+                                        .get()
+                                        .load(GENERIC_ART_URL)
+                                        .get()
                                 }
                             }
                         )
@@ -572,13 +578,6 @@ internal class MusicService : MediaBrowserServiceCompat() {
             return PlaybackStateCompat.ACTION_SKIP_TO_NEXT or PlaybackStateCompat.ACTION_SKIP_TO_QUEUE_ITEM
         }
 
-        private val placeholderBitmap = BitmapFactory.decodeResource(resources, R.drawable.ic_generic_album_art)!!
-        private val placeholderUri = Uri.Builder()
-            .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
-            .authority(resources.getResourcePackageName(R.drawable.ic_generic_album_art))
-            .appendPath(resources.getResourceTypeName(R.drawable.ic_generic_album_art))
-            .appendPath(resources.getResourceEntryName(R.drawable.ic_generic_album_art))
-            .build()
         override fun getMediaDescription(player: Player, windowIndex: Int): MediaDescriptionCompat {
             return MediaDescriptionCompat.Builder()
                 .setMediaId(windowIndex.toString())
@@ -615,14 +614,14 @@ internal class MusicService : MediaBrowserServiceCompat() {
                         try {
                             playlist[windowIndex].getArtUrl(artSize).also {
                                 try {
+                                    uri = Uri.parse(it)
                                     bitmap = Picasso.get()
-                                        .load(it)
+                                        .load(uri)
                                         .networkPolicy(NetworkPolicy.OFFLINE)
                                         .get()
-                                    uri = Uri.parse(it)
                                 } catch (e: IOException) {
-                                    bitmap = placeholderBitmap
-                                    uri = placeholderUri
+                                    uri = Uri.parse(GENERIC_ART_URL)
+                                    bitmap = Picasso.get().load(uri).get()
 
                                     Picasso.get().load(it).fetch(object : Callback {
                                         override fun onSuccess() {

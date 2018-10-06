@@ -10,16 +10,15 @@
 
     <com.makeramen.roundedimageview.RoundedImageView
         android:id="@+id/userPicture"
-        android:layout_width="56dp"
+        android:layout_width="wrap_content"
         android:layout_height="56dp"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
+        android:adjustViewBounds="true"
         android:scaleType="fitCenter"
-        android:src="@drawable/ic_generic_album_art"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:riv_oval="true"
-        tools:src="@drawable/ic_generic_album_art" />
+        app:riv_oval="true" />
 
     <TextView
         android:id="@+id/userName"

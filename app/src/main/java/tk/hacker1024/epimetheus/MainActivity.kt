@@ -84,7 +84,6 @@ class MainActivity : AppCompatActivity() {
             Picasso
                 .get()
                 .load(it["profilePicUri"] as Uri)
-                .placeholder(R.drawable.ic_generic_album_art)
                 .into(userPicture)
         })
 

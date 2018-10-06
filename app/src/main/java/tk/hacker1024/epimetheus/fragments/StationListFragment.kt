@@ -26,6 +26,7 @@ import org.json.JSONException
 import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.PandoraViewModel
 import tk.hacker1024.epimetheus.R
+import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.User
 import java.io.IOException
 
@@ -58,15 +59,7 @@ class StationListFragment : Fragment() {
                 try {
                     for (stationListItem in it) {
                         Picasso.get()
-                            .run {
-                                stationListItem.getArtUrl(artSize).let { artUrl ->
-                                    if (artUrl != null) {
-                                        load(artUrl)
-                                    } else {
-                                        load(R.drawable.ic_generic_album_art)
-                                    }
-                                }
-                            }
+                            .load(stationListItem.getArtUrl(artSize))
                             .fetch()
                     }
                 } catch (e: JSONException) { }
@@ -121,49 +114,56 @@ class StationListFragment : Fragment() {
 
             // Bind the station art
             Picasso.get()
-                .run {
-                    viewModel.getStationList(user).value!![holder.adapterPosition].getArtUrl(
-                        if (viewModel.getStationList(user).value!![holder.adapterPosition].isShuffle) 500 else artSize
-                    ).let { artUrl ->
-                        if (artUrl != null) {
-                            load(artUrl)
-                        } else {
-                            load(R.drawable.ic_generic_album_art)
-                        }
-                    }
-                }
-                .error(R.drawable.ic_generic_album_art)
-                // While the picture is downloading, show a music note icon
-                .placeholder(R.drawable.ic_generic_album_art)
-                // Insert into the ImageView
+                .load(GENERIC_ART_URL)
                 .into(
                     object : Target {
-                        override fun onPrepareLoad(placeHolderDrawable: Drawable) {
-                            holder.card.station_logo.setImageDrawable(placeHolderDrawable)
-                        }
+                        override fun onPrepareLoad(placeHolderDrawable: Drawable?) {}
 
                         override fun onBitmapLoaded(bitmap: Bitmap, from: Picasso.LoadedFrom) {
-                            holder.card.station_logo.apply {
-                                if (from != Picasso.LoadedFrom.MEMORY) {
-                                    animate().setDuration(200).alpha(0f).setListener(
-                                        object : Animator.AnimatorListener {
-                                            override fun onAnimationStart(animation: Animator?) {}
-                                            override fun onAnimationCancel(animation: Animator?) {}
-                                            override fun onAnimationRepeat(animation: Animator?) {}
+                            holder.card.station_logo.setImageBitmap(bitmap)
 
-                                            override fun onAnimationEnd(animation: Animator?) {
-                                                setImageBitmap(bitmap)
-                                                animate().setDuration(200).alpha(1f).start()
+                            Picasso.get()
+                                .load (
+                                    viewModel.getStationList(user).value!![holder.adapterPosition].getArtUrl(
+                                        if (viewModel.getStationList(user).value!![holder.adapterPosition].isShuffle) 500 else artSize
+                                    )
+                                )
+                                // Insert into the ImageView
+                                .into(
+                                    object : Target {
+                                        override fun onPrepareLoad(placeHolderDrawable: Drawable?) {}
+
+                                        override fun onBitmapLoaded(bitmap: Bitmap, from: Picasso.LoadedFrom) {
+                                            holder.card.station_logo.apply {
+                                                if (from == Picasso.LoadedFrom.MEMORY) {
+                                                    setImageBitmap(bitmap)
+                                                } else {
+                                                    animate().setDuration(200).alpha(0f).setListener(
+                                                        object : Animator.AnimatorListener {
+                                                            override fun onAnimationStart(animation: Animator?) {}
+                                                            override fun onAnimationCancel(animation: Animator?) {}
+                                                            override fun onAnimationRepeat(animation: Animator?) {}
+
+                                                            override fun onAnimationEnd(animation: Animator?) {
+                                                                setImageBitmap(bitmap)
+                                                                animate().setDuration(200).alpha(1f).start()
+                                                            }
+                                                        }
+                                                    ).start()
+                                                }
                                             }
                                         }
-                                    ).start()
-                                } else {
-                                    setImageBitmap(bitmap)
-                                }
-                            }
+
+                                        override fun onBitmapFailed(e: Exception, errorDrawable: Drawable?) {
+                                            if (e is IOException) {
+                                                (requireActivity() as MainActivity).networkError()
+                                            }
+                                        }
+                                    }
+                                )
                         }
 
-                        override fun onBitmapFailed(e: Exception, errorDrawable: Drawable) {
+                        override fun onBitmapFailed(e: Exception, errorDrawable: Drawable?) {
                             if (e is IOException) {
                                 (requireActivity() as MainActivity).networkError()
                             }

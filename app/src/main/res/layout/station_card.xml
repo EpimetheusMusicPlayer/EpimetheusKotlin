@@ -20,7 +20,6 @@
         app:riv_corner_radius="3.6129032258dp"
         android:contentDescription="@string/album_cover"
         android:scaleType="fitCenter"
-        tools:srcCompat="@drawable/ic_generic_album_art_rounded" />
 
     <TextView
         android:id="@+id/station_name"
