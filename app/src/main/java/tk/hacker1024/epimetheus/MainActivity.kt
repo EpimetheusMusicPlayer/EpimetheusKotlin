@@ -6,7 +6,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
-import android.view.Menu
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.view.GravityCompat
@@ -20,7 +19,7 @@ import androidx.navigation.findNavController
 import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupWithNavController
-import com.squareup.picasso.Picasso
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.activity_main.view.*
 import kotlinx.android.synthetic.main.nav_header.*
@@ -29,6 +28,7 @@ import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.dialogs.showNetworkErrorDialog
 import tk.hacker1024.epimetheus.dialogs.showPandoraErrorDialog
 import tk.hacker1024.epimetheus.fragments.AUTH_SHARED_PREFS_NAME
+import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
 import tk.hacker1024.epimetheus.service.MusicService
 import tk.hacker1024.epimetheus.service.MusicServiceResults
 import tk.hacker1024.epimetheus.service.RESULTS_BROADCAST_FILTER
@@ -81,9 +81,17 @@ class MainActivity : AppCompatActivity() {
         ViewModelProviders.of(this)[PandoraViewModel::class.java].userDetails.observe(this, Observer {
             userName.text = it["username"] as String
             userEmail.text = it["email"] as String
-            Picasso
-                .get()
+            GlideApp
+                .with(this)
                 .load(it["profilePicUri"] as Uri)
+                .circleCrop()
+                .transition(DrawableTransitionOptions.withCrossFade())
+                .thumbnail(
+                    GlideApp
+                        .with(this)
+                        .load(GENERIC_ART_URL)
+                        .circleCrop()
+                )
                 .into(userPicture)
         })
 

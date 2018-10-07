@@ -4,10 +4,9 @@ import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.ContentResolver
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -18,9 +17,9 @@ import android.support.v4.media.MediaDescriptionCompat
 import android.support.v4.media.RatingCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.media.MediaBrowserServiceCompat
@@ -37,19 +36,15 @@ import com.google.android.exoplayer2.source.TrackGroupArray
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory
-import com.squareup.picasso.Callback
-import com.squareup.picasso.NetworkPolicy
-import com.squareup.picasso.Picasso
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.json.JSONException
+import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.libepimetheus.*
 import tk.hacker1024.libepimetheus.data.Song
 import tk.hacker1024.libepimetheus.data.Station
 import java.io.IOException
-import java.util.concurrent.CountDownLatch
 
 internal const val GENERIC_ART_URL = "https://www.pandora.com/web-version/1.25.1/images/album_500.png"
 
@@ -68,7 +63,11 @@ internal enum class MusicServiceResults(var message: String = "") {
 
 internal class MusicService : MediaBrowserServiceCompat() {
     // The album art size
-    val artSize; get() = PreferenceManager.getDefaultSharedPreferences(this).getString("art_size", "500")!!.toInt()
+    private val artSize
+        get() = PreferenceManager.getDefaultSharedPreferences(this).getString(
+            "art_size",
+            "500"
+        )!!.toInt()
     // The thread of the media player
     private lateinit var mediaPlayerHandler: Handler
     // Notification builder - cached to save resources
@@ -84,67 +83,24 @@ internal class MusicService : MediaBrowserServiceCompat() {
     // The user object, initialized with a serialized object from the intent
     private lateinit var user: User
     // The list of stations
-    private lateinit var stations: List<Station>
+    private data class StationBitmapHolder(val station: Station, var artBitmap: Bitmap? = null, var artUri: Uri? = null)
+    private lateinit var stations: List<StationBitmapHolder>
     // The station index
     private var stationIndex = -1
     // The station object
-    private val station get() = stations[stationIndex]
+    private val station get() = stations[stationIndex].station
     // The song playlist. Functions added to load and remove songs. Manages an ExoPlayer ConcatenatingMediaSource.
-    private val playlist = object : ArrayList<Song>() {
-        var mediaSource = ConcatenatingMediaSource()
-        private val extractorMediaSourceFactory = ExtractorMediaSource.Factory(DefaultHttpDataSourceFactory("khtml"))
-        // Loads more songs
-        fun loadSongs() {
-            try {
-                station.getPlaylist(user).also { newSongs ->
-                    val newMediaSources = List<MediaSource>(newSongs.size) {
-                        extractorMediaSourceFactory.createMediaSource(newSongs[it].audioUri)
-                    }
-
-                    this += newSongs
-                    mediaSource.addMediaSources(newMediaSources)
-
-                    // Download the album art in a background thread, and update the notification
-                    try {
-                        for (song in newSongs) {
-                            song.getArtUrl(artSize).also {
-                                Picasso.get().load(it).fetch(
-                                    object : Callback {
-                                        override fun onSuccess() {
-                                            if (indexOf(song) == 0) {
-                                                updateNotificationAlbumArt(Uri.parse(it))
-                                                updateNotification()
-                                            }
-                                        }
-
-                                        override fun onError(e: Exception) {}
-                                    }
-                                )
-                            }
-                        }
-                    } catch (e: JSONException) {Log.wtf(LOG_TAG, e)}
-                }
-            } catch (e: IOException) {
-                stop(MusicServiceResults.ERROR_NETWORK)
-            }
-        }
-
-        fun removeSong(index: Int) {
-            mediaSource.removeMediaSource(index)
-            super.removeAt(index)
-        }
-
-        fun clearSongs() {
-            mediaSource = ConcatenatingMediaSource()
-            super.clear()
-        }
-    }
+    private val playlist = Playlist()
 
     override fun onCreate() {
         super.onCreate()
 
         // Set up the MediaPlayer
-        mediaPlayer = ExoPlayerFactory.newSimpleInstance(this, DefaultRenderersFactory(this), DefaultTrackSelector())
+        mediaPlayer = ExoPlayerFactory.newSimpleInstance(
+            this,
+            DefaultRenderersFactory(this),
+            DefaultTrackSelector()
+        )
         mediaPlayer.addListener(PlayerEventListener())
         mediaPlayer.playWhenReady = false
 
@@ -153,7 +109,11 @@ internal class MusicService : MediaBrowserServiceCompat() {
 
         // Set up the MediaSessionCompat
         mediaSession = MediaSessionCompat(this, LOG_TAG)
-        mediaSessionConnector = MediaSessionConnector(mediaSession, MediaSessionConnectorCallback(), MediaSessionConnector.DefaultMediaMetadataProvider(mediaSession.controller, null))
+        mediaSessionConnector = MediaSessionConnector(
+            mediaSession,
+            MediaSessionConnectorCallback(),
+            MediaSessionConnector.DefaultMediaMetadataProvider(mediaSession.controller, null)
+        )
         queueNavigator = QueueNavigator(mediaSession)
         mediaSessionConnector.setQueueNavigator(queueNavigator)
         mediaSessionConnector.setPlayer(mediaPlayer, MediaPlaybackPreparer())
@@ -162,14 +122,19 @@ internal class MusicService : MediaBrowserServiceCompat() {
 
         // Register the notification channel
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel(MEDIA_NOTIFICATION_CHANNEL_ID, "Media", NotificationManager.IMPORTANCE_LOW).apply {
+            NotificationChannel(
+                MEDIA_NOTIFICATION_CHANNEL_ID,
+                "Media",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
                 description = "Media notifications with controls."
                 getSystemService(NotificationManager::class.java).createNotificationChannel(this)
             }
         }
 
         // Create the media notification
-        mediaNotificationBuilder = NotificationCompat.Builder(this,
+        mediaNotificationBuilder = NotificationCompat.Builder(
+            this,
             MEDIA_NOTIFICATION_CHANNEL_ID
         )
             .setContentIntent(
@@ -198,22 +163,34 @@ internal class MusicService : MediaBrowserServiceCompat() {
             .addAction(
                 R.drawable.ic_fast_rewind_black_24dp,
                 "Rewind",
-                MediaButtonReceiver.buildMediaButtonPendingIntent(this@MusicService, PlaybackStateCompat.ACTION_REWIND)
+                MediaButtonReceiver.buildMediaButtonPendingIntent(
+                    this@MusicService,
+                    PlaybackStateCompat.ACTION_REWIND
+                )
             )
             .addAction(
                 R.drawable.ic_pause_black_24dp,
                 "Pause",
-                MediaButtonReceiver.buildMediaButtonPendingIntent(this@MusicService, PlaybackStateCompat.ACTION_PAUSE)
+                MediaButtonReceiver.buildMediaButtonPendingIntent(
+                    this@MusicService,
+                    PlaybackStateCompat.ACTION_PAUSE
+                )
             )
             .addAction(
                 R.drawable.ic_fast_forward_black_24dp,
                 "Fast-forward",
-                MediaButtonReceiver.buildMediaButtonPendingIntent(this@MusicService, PlaybackStateCompat.ACTION_FAST_FORWARD)
+                MediaButtonReceiver.buildMediaButtonPendingIntent(
+                    this@MusicService,
+                    PlaybackStateCompat.ACTION_FAST_FORWARD
+                )
             )
             .addAction(
                 R.drawable.ic_skip_next_black_24dp,
                 "Skip",
-                MediaButtonReceiver.buildMediaButtonPendingIntent(this@MusicService, PlaybackStateCompat.ACTION_SKIP_TO_NEXT)
+                MediaButtonReceiver.buildMediaButtonPendingIntent(
+                    this@MusicService,
+                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+                )
             )
             .setStyle(
                 MediaStyle()
@@ -271,19 +248,40 @@ internal class MusicService : MediaBrowserServiceCompat() {
         }
 
         stations = intent.getParcelableArrayListExtra<Station>("stations").let { newStations ->
-            if (::stations.isInitialized && stations != newStations) {
-                mediaPlayer.playWhenReady = false
-                playlist.clearSongs()
+            List(newStations.size) { i -> StationBitmapHolder(newStations[i]) }.also {
+                if (::stations.isInitialized && stations != it) {
+                    mediaPlayer.playWhenReady = false
+                    playlist.clearSongs()
+                }
+
+                if (!::stations.isInitialized || stations != it) {
+                    GlobalScope.launch {
+                        for (stationHolder in it) {
+                            stationHolder.station.getArtUrl(artSize).also { artUrl ->
+                                stationHolder.artBitmap = GlideApp
+                                    .with(this@MusicService)
+                                    .asBitmap()
+                                    .load(artUrl)
+                                    .submit()
+                                    .get()
+                                stationHolder.artUri = artUrl.toUri()
+                            }
+                        }
+                    }
+                }
             }
-            newStations
         }
 
         // Set the media notification subtitle
         mediaNotificationBuilder.setSubText(station.name)
 
-        // Start a new song if the playlist is empty
-        if (playlist.size == 0) {
-            GlobalScope.launch { newSong(false) }
+        GlobalScope.launch {
+            // Get the generic album art icon
+            SongBitmapHolder.setGenericBitmap(this@MusicService)
+            if (playlist.size == 0) {
+                // Start a new song if the playlist is empty
+                newSong(false)
+            }
         }
 
         // Activate the media session
@@ -300,7 +298,10 @@ internal class MusicService : MediaBrowserServiceCompat() {
     override fun onGetRoot(clientPackageName: String, clientUid: Int, rootHints: Bundle?) =
         BrowserRoot("@stations/", null)
 
-    override fun onLoadChildren(parentId: String, result: Result<MutableList<MediaBrowserCompat.MediaItem>>) {
+    override fun onLoadChildren(
+        parentId: String,
+        result: Result<MutableList<MediaBrowserCompat.MediaItem>>
+    ) {
         if (parentId == "@stations/" && ::stations.isInitialized && stationIndex != -1) {
             result.detach()
             GlobalScope.launch {
@@ -309,33 +310,9 @@ internal class MusicService : MediaBrowserServiceCompat() {
                         MediaBrowserCompat.MediaItem(
                             MediaDescriptionCompat.Builder()
                                 .setMediaId(i.toString())
-                                .setTitle(stations[i].name)
-                                .setIconBitmap(
-                                    stations[i].getArtUrl(artSize).let { artUrl ->
-                                        try {
-                                            Picasso
-                                                .get()
-                                                .load(artUrl)
-                                                .networkPolicy(NetworkPolicy.OFFLINE)
-                                                .get()
-                                        } catch (e: IOException) {
-                                            Picasso
-                                                .get()
-                                                .load(artUrl)
-                                                .fetch(object : Callback {
-                                                    override fun onSuccess() {
-                                                        notifyChildrenChanged(parentId)
-                                                    }
-
-                                                    override fun onError(e: Exception) {}
-                                                })
-                                            Picasso
-                                                .get()
-                                                .load(GENERIC_ART_URL)
-                                                .get()
-                                        }
-                                    }
-                                )
+                                .setTitle(stations[i].station.name)
+                                .setIconBitmap(stations[i].artBitmap)
+                                .setIconUri(stations[i].artUri)
                                 .build(),
                             MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
                         )
@@ -354,35 +331,11 @@ internal class MusicService : MediaBrowserServiceCompat() {
                 MediaBrowserCompat.MediaItem(
                     MediaDescriptionCompat.Builder()
                         .setMediaId(itemId)
-                        .setTitle(stations[itemId.toInt()].name)
-                        .setIconBitmap(
-                            stations[itemId.toInt()].getArtUrl(artSize).let { artUrl ->
-                                try {
-                                    Picasso
-                                        .get()
-                                        .load(artUrl)
-                                        .networkPolicy(NetworkPolicy.OFFLINE)
-                                        .get()
-                                } catch (e: IOException) {
-                                    Picasso
-                                        .get()
-                                        .load(artUrl)
-                                        .fetch(object : Callback {
-                                            override fun onSuccess() {
-                                                notifyChildrenChanged("@stations/")
-                                            }
-
-                                            override fun onError(e: Exception) {}
-                                        })
-                                    Picasso
-                                        .get()
-                                        .load(GENERIC_ART_URL)
-                                        .get()
-                                }
-                            }
-                        )
+                        .setTitle(stations[itemId.toInt()].station.name)
+                        .setIconBitmap(stations[itemId.toInt()].artBitmap)
+                        .setIconUri(stations[itemId.toInt()].artUri)
                         .build(),
-                        MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
+                    MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
                 )
             )
         }
@@ -417,8 +370,8 @@ internal class MusicService : MediaBrowserServiceCompat() {
     private fun updateMetadata() {
         try {
             mediaNotificationBuilder
-                .setContentTitle(playlist[0].name)
-                .setContentText("${playlist[0].artist} - ${playlist[0].album}")
+                .setContentTitle(playlist[0].song.name)
+                .setContentText("${playlist[0].song.artist} - ${playlist[0].song.album}")
                 .setLargeIcon(queueNavigator.getMediaDescription(mediaPlayer, 0).iconBitmap)
             updateNotification()
 
@@ -441,35 +394,27 @@ internal class MusicService : MediaBrowserServiceCompat() {
 //                    mediaNotificationBuilder.setLargeIcon(albumArt)
 //                    NotificationManagerCompat.from(this@MusicService)
 //                        .notify(1, mediaNotificationBuilder.build())
-                } catch (e: IllegalArgumentException) {} catch (e: IOException) {}
+                } catch (e: IllegalArgumentException) {
+                } catch (e: IOException) {
+                }
             }
         } catch (e: IOException) {
             stop(MusicServiceResults.ERROR_INTERNAL)
         }
     }
 
-    private fun updateNotificationAlbumArt(uri: Uri) {
-        lateinit var bitmap: Bitmap
-        val notificationCountDownLatch = CountDownLatch(1)
-        GlobalScope.launch {
-            bitmap = Picasso.get()
-                .load(uri)
-                .networkPolicy(NetworkPolicy.OFFLINE)
-                .get()
-            notificationCountDownLatch.countDown()
-        }
-        notificationCountDownLatch.await()
-        mediaNotificationBuilder.setLargeIcon(bitmap)
-    }
-
     @SuppressLint("RestrictedApi")
     private fun setNotificationPlayButton() {
         mediaNotificationBuilder.mActions.removeAt(2)
-        mediaNotificationBuilder.mActions.add(2,
+        mediaNotificationBuilder.mActions.add(
+            2,
             NotificationCompat.Action(
                 R.drawable.ic_play_arrow_black_24dp,
                 "Play",
-                MediaButtonReceiver.buildMediaButtonPendingIntent(this@MusicService, PlaybackStateCompat.ACTION_PLAY)
+                MediaButtonReceiver.buildMediaButtonPendingIntent(
+                    this@MusicService,
+                    PlaybackStateCompat.ACTION_PLAY
+                )
             )
         )
         NotificationManagerCompat.from(this).notify(1, mediaNotificationBuilder.build())
@@ -478,11 +423,15 @@ internal class MusicService : MediaBrowserServiceCompat() {
     @SuppressLint("RestrictedApi")
     private fun setNotificationPauseButton() {
         mediaNotificationBuilder.mActions.removeAt(2)
-        mediaNotificationBuilder.mActions.add(2,
+        mediaNotificationBuilder.mActions.add(
+            2,
             NotificationCompat.Action(
                 R.drawable.ic_pause_black_24dp,
                 "Pause",
-                MediaButtonReceiver.buildMediaButtonPendingIntent(this@MusicService, PlaybackStateCompat.ACTION_PAUSE)
+                MediaButtonReceiver.buildMediaButtonPendingIntent(
+                    this@MusicService,
+                    PlaybackStateCompat.ACTION_PAUSE
+                )
             )
         )
         NotificationManagerCompat.from(this).notify(1, mediaNotificationBuilder.build())
@@ -519,7 +468,12 @@ internal class MusicService : MediaBrowserServiceCompat() {
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {}
         override fun onSeekProcessed() {}
         override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {}
-        override fun onTracksChanged(trackGroups: TrackGroupArray, trackSelections: TrackSelectionArray) {}
+        override fun onTracksChanged(
+            trackGroups: TrackGroupArray,
+            trackSelections: TrackSelectionArray
+        ) {
+        }
+
         override fun onLoadingChanged(isLoading: Boolean) {}
         override fun onRepeatModeChanged(repeatMode: Int) {}
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {}
@@ -565,7 +519,9 @@ internal class MusicService : MediaBrowserServiceCompat() {
             command: String,
             extras: Bundle,
             cb: ResultReceiver
-        ) { cb.send(0, null) }
+        ) {
+            cb.send(0, null)
+        }
 
         override fun onSeekTo(player: Player, pos: Long) {}
         override fun onSetShuffleMode(player: Player?, shuffleMode: Int) {}
@@ -573,75 +529,45 @@ internal class MusicService : MediaBrowserServiceCompat() {
         override fun getCommands() = null
     }
 
-    private inner class QueueNavigator(mediaSession: MediaSessionCompat) : TimelineQueueNavigator(mediaSession) {
+    private inner class QueueNavigator(mediaSession: MediaSessionCompat) :
+        TimelineQueueNavigator(mediaSession) {
         override fun getSupportedQueueNavigatorActions(player: Player?): Long {
             return PlaybackStateCompat.ACTION_SKIP_TO_NEXT or PlaybackStateCompat.ACTION_SKIP_TO_QUEUE_ITEM
         }
 
         override fun getMediaDescription(player: Player, windowIndex: Int): MediaDescriptionCompat {
+            playlist.loadBitmapIfNeeded(windowIndex)
             return MediaDescriptionCompat.Builder()
                 .setMediaId(windowIndex.toString())
                 // Sometimes, I'll randomly get an IndexOutOfBoundsException. I have no idea why, and I've never seen any "null"s in the notification.
                 .run {
                     try {
-                        setTitle(playlist[windowIndex].name)
-                        setSubtitle(playlist[windowIndex].artist)
-                        setDescription(playlist[windowIndex].album)
-                    } catch (e: IndexOutOfBoundsException) { this }
+                        setTitle(playlist[windowIndex].song.name)
+                        setSubtitle(playlist[windowIndex].song.artist)
+                        setDescription(playlist[windowIndex].song.album)
+                    } catch (e: IndexOutOfBoundsException) {
+                        this
+                    }
                 }
                 .setExtras(
                     bundleOf(
                         "settingFeedback" to
                                 try {
-                                    playlist[windowIndex].settingFeedback
+                                    playlist[windowIndex].song.settingFeedback
                                 } catch (e: IndexOutOfBoundsException) {
                                     RatingCompat.newUnratedRating(RatingCompat.RATING_THUMB_UP_DOWN)
                                 },
                         "rating" to
                                 try {
-                                    playlist[windowIndex].rating
+                                    playlist[windowIndex].song.rating
                                 } catch (e: IndexOutOfBoundsException) {
                                     RatingCompat.newUnratedRating(RatingCompat.RATING_THUMB_UP_DOWN)
                                 }
                     )
                 )
-                .apply {
-                    val countDownLatch = CountDownLatch(1)
-                    var bitmap: Bitmap? = null
-                    var uri: Uri? = null
-
-                    GlobalScope.launch {
-                        try {
-                            playlist[windowIndex].getArtUrl(artSize).also {
-                                try {
-                                    uri = Uri.parse(it)
-                                    bitmap = Picasso.get()
-                                        .load(uri)
-                                        .networkPolicy(NetworkPolicy.OFFLINE)
-                                        .get()
-                                } catch (e: IOException) {
-                                    uri = Uri.parse(GENERIC_ART_URL)
-                                    bitmap = Picasso.get().load(uri).get()
-
-                                    Picasso.get().load(it).fetch(object : Callback {
-                                        override fun onSuccess() {
-                                            if ( try { mediaSession.controller.queue[windowIndex].description.iconUri == uri } catch (e: IndexOutOfBoundsException) { false }) {
-                                                onTimelineChanged(player)
-                                            }
-                                        }
-
-                                        override fun onError(e: Exception) {}
-                                    })
-                                }
-                            }
-                        } catch (e: IndexOutOfBoundsException) {}
-                        countDownLatch.countDown()
-                    }
-                    countDownLatch.await()
-
-                    setIconUri(uri)
-                    setIconBitmap(bitmap)
-                }.build()
+                .setIconBitmap(try { playlist[windowIndex].artBitmap } catch (e: IndexOutOfBoundsException) { SongBitmapHolder.genericBitmap })
+                .setIconUri(try { playlist[windowIndex].artUri } catch (e: IndexOutOfBoundsException) { SongBitmapHolder.genericUri })
+                .build()
         }
 
         override fun onSkipToNext(player: Player?) {
@@ -671,7 +597,9 @@ internal class MusicService : MediaBrowserServiceCompat() {
             command: String,
             extras: Bundle,
             cb: ResultReceiver
-        ) { cb.send(0, null) }
+        ) {
+            cb.send(0, null)
+        }
 
         override fun getCommands() = null
         override fun onPrepareFromSearch(query: String, extras: Bundle?) {}
@@ -685,9 +613,9 @@ internal class MusicService : MediaBrowserServiceCompat() {
                 GlobalScope.launch {
                     try {
                         if (rating.isRated) {
-                            playlist[extras.getInt("songIndex")].addFeedback(rating.isThumbUp, user)
+                            playlist[extras.getInt("songIndex")].song.addFeedback(rating.isThumbUp, user)
                         } else {
-                            playlist[extras.getInt("songIndex")].deleteFeedback(user)
+                            playlist[extras.getInt("songIndex")].song.deleteFeedback(user)
                         }
                         mediaPlayerHandler.post {
                             queueNavigator.onTimelineChanged(mediaPlayer)
@@ -710,9 +638,9 @@ internal class MusicService : MediaBrowserServiceCompat() {
             GlobalScope.launch {
                 try {
                     if (rating.isRated) {
-                        playlist[0].addFeedback(rating.isThumbUp, user)
+                        playlist[0].song.addFeedback(rating.isThumbUp, user)
                     } else {
-                        playlist[0].deleteFeedback(user)
+                        playlist[0].song.deleteFeedback(user)
                     }
                     mediaPlayerHandler.post {
                         queueNavigator.onTimelineChanged(mediaPlayer)
@@ -729,8 +657,106 @@ internal class MusicService : MediaBrowserServiceCompat() {
 
         override fun getCommands() = null
 
-        override fun onCommand(player: Player, command: String, extras: Bundle, cb: ResultReceiver) {
+        override fun onCommand(
+            player: Player,
+            command: String,
+            extras: Bundle,
+            cb: ResultReceiver
+        ) {
             cb.send(0, null)
+        }
+    }
+
+    data class SongBitmapHolder(
+        internal val song: Song,
+        internal var artBitmap: Bitmap = genericBitmap,
+        internal var artUri: Uri = genericUri
+    ) {
+        companion object {
+            internal lateinit var genericBitmap: Bitmap
+            val genericUri = GENERIC_ART_URL.toUri()
+
+            internal fun setGenericBitmap(context: Context) {
+                genericBitmap = GlideApp
+                    .with(context)
+                    .asBitmap()
+                    .load(GENERIC_ART_URL)
+                    .submit()
+                    .get()
+            }
+        }
+    }
+    internal inner class Playlist : ArrayList<SongBitmapHolder>() {
+        internal var mediaSource = ConcatenatingMediaSource()
+        private val extractorMediaSourceFactory =
+            ExtractorMediaSource.Factory(DefaultHttpDataSourceFactory("khtml"))
+
+        // Loads more songs
+        internal fun loadSongs() {
+            try {
+                station.getPlaylist(user).also { newSongs ->
+                    val newMediaSources = List<MediaSource>(newSongs.size) {
+                        extractorMediaSourceFactory.createMediaSource(newSongs[it].audioUri)
+                    }
+
+                    for (song in newSongs) {
+                        add(SongBitmapHolder(song))
+                    }
+                    mediaSource.addMediaSources(newMediaSources)
+
+                    // Download the album art in a background thread, and update the notification
+                    for (i in 0 until newSongs.size) {
+                        loadBitmapIfNeeded(size - newSongs.size + i)
+                    }
+                }
+            } catch (e: IOException) {
+                stop(MusicServiceResults.ERROR_NETWORK)
+            }
+        }
+
+        internal fun loadBitmapIfNeeded(index: Int) {
+            if (get(index).artUri == SongBitmapHolder.genericUri) {
+                GlobalScope.launch {
+                    get(index).song.getArtUrl(artSize).also {
+                        GlideApp
+                            .with(this@MusicService)
+                            .asBitmap()
+                            .load(it)
+                            .submit()
+                            .apply {
+                                get(index).apply {
+                                    it.toUri().also { newUri ->
+                                        get()
+                                        if (artUri == SongBitmapHolder.genericUri) {
+                                            artBitmap = get()
+                                            artUri = newUri
+                                            mediaPlayerHandler.post {
+                                                queueNavigator.onTimelineChanged(mediaPlayer)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (index == 0) {
+                                    GlobalScope.launch {
+                                        mediaNotificationBuilder.setLargeIcon(get())
+                                        updateNotification()
+                                    }
+                                }
+                            }
+                    }
+                }
+            }
+        }
+
+        internal fun removeSong(index: Int) {
+            mediaSource.removeMediaSource(index)
+            super.removeAt(index)
+        }
+
+        internal fun clearSongs() {
+            mediaSource = ConcatenatingMediaSource()
+            super.clear()
         }
     }
 }

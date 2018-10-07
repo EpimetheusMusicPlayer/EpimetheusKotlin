@@ -13,20 +13,19 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.edit
 import androidx.core.view.GravityCompat
 import androidx.core.view.get
-import androidx.core.widget.PopupWindowCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.NavigationUI
 import androidx.preference.PreferenceManager
-import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fragment_login.*
 import kotlinx.android.synthetic.main.fragment_login.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.PandoraViewModel
 import tk.hacker1024.epimetheus.R
@@ -107,9 +106,9 @@ class LoginFragment : Fragment() {
     private fun authenticate(email: String, password: String, sharedPrefs: SharedPreferences? = null) {
         lateinit var user: User
         toggleLoadingScreen(true)
+        GlideApp.with(requireContext()).load(GENERIC_ART_URL).preload()
         GlobalScope.launch {
             try {
-                Picasso.get().load(GENERIC_ART_URL).fetch()
                 user = User(email, password, PreferenceManager.getDefaultSharedPreferences(requireContext()).getBoolean("use_portaller", false))
                 sharedPrefs?.edit(true) {
                     putString(EMAIL_KEY, email)

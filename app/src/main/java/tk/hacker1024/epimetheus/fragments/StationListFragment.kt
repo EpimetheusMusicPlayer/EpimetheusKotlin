@@ -1,7 +1,5 @@
 package tk.hacker1024.epimetheus.fragments
 
-import android.animation.Animator
-import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -18,22 +16,30 @@ import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.squareup.picasso.Picasso
-import com.squareup.picasso.Target
+import com.bumptech.glide.Glide
+import com.bumptech.glide.ListPreloader
+import com.bumptech.glide.RequestBuilder
+import com.bumptech.glide.integration.recyclerview.RecyclerViewPreloader
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.bumptech.glide.util.ViewPreloadSizeProvider
 import kotlinx.android.synthetic.main.fragment_station_list.view.*
 import kotlinx.android.synthetic.main.station_card.view.*
-import org.json.JSONException
+import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.PandoraViewModel
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.User
-import java.io.IOException
 
 class StationListFragment : Fragment() {
     private lateinit var viewModel: PandoraViewModel
     private lateinit var user: User
-    val artSize; get() = PreferenceManager.getDefaultSharedPreferences(requireContext()).getString("art_size", "500")!!.toInt()
+    val artSize
+        get() = PreferenceManager.getDefaultSharedPreferences(requireContext()).getString(
+            "art_size",
+            "500"
+        )!!.toInt()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,7 +48,11 @@ class StationListFragment : Fragment() {
         viewModel = ViewModelProviders.of(requireActivity())[PandoraViewModel::class.java]
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
         StationListFragmentArgs.fromBundle(arguments).user?.also {
             findNavController().graph[R.id.stationListFragment].setDefaultArguments(
                 Bundle().apply { putParcelable("user", it) }
@@ -55,14 +65,6 @@ class StationListFragment : Fragment() {
                 view?.recyclerview_station_list?.adapter?.notifyDataSetChanged()
                 view?.recyclerview_station_list?.visibility = View.VISIBLE
                 view?.station_list_swipe_refresh_layout?.isRefreshing = false
-
-                try {
-                    for (stationListItem in it) {
-                        Picasso.get()
-                            .load(stationListItem.getArtUrl(artSize))
-                            .fetch()
-                    }
-                } catch (e: JSONException) { }
             } else {
                 (requireActivity() as MainActivity).networkError {
                     view?.recyclerview_station_list?.visibility = View.INVISIBLE
@@ -71,19 +73,43 @@ class StationListFragment : Fragment() {
             }
         })
 
-        return inflater.inflate(R.layout.fragment_station_list, container, false)
+        return inflater.inflate(R.layout.fragment_station_list, container, false).apply {
+            recyclerview_station_list.apply {
+                addOnScrollListener(
+                    RecyclerViewPreloader<String>(
+                        Glide.with(this),
+                        object : ListPreloader.PreloadModelProvider<String> {
+                            override fun getPreloadItems(position: Int) =
+                                mutableListOf(
+                                    viewModel.getStationList(user).value!![position].getArtUrl(
+                                        if (viewModel.getStationList(user).value!![position].isShuffle) 500 else artSize
+                                    )
+                                )
+
+                            override fun getPreloadRequestBuilder(item: String): RequestBuilder<Drawable> {
+                                return GlideApp
+                                    .with(this@StationListFragment)
+                                    .load(item)
+                                    .transform(RoundedCorners(8))
+                                    .transition(DrawableTransitionOptions.withCrossFade())
+                            }
+                        },
+                        ViewPreloadSizeProvider<String>(layoutInflater.inflate(R.layout.station_card, container).station_logo),
+                        10
+                    )
+                )
+
+                layoutManager = LinearLayoutManager(context)
+                adapter = StationListAdapter()
+                addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
+            }
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         view.station_list_swipe_refresh_layout.setOnRefreshListener {
             view.recyclerview_station_list?.visibility = View.INVISIBLE
             viewModel.loadStations(user)
-        }
-
-        view.recyclerview_station_list.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = StationListAdapter()
-            addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
         }
     }
 
@@ -96,7 +122,9 @@ class StationListFragment : Fragment() {
         }
     }
 
-    private class StationListAdapterViewHolder(val card: LinearLayout) : RecyclerView.ViewHolder(card)
+    private class StationListAdapterViewHolder(val card: LinearLayout) :
+        RecyclerView.ViewHolder(card)
+
     private inner class StationListAdapter : RecyclerView.Adapter<StationListAdapterViewHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
             StationListAdapterViewHolder(
@@ -110,71 +138,30 @@ class StationListFragment : Fragment() {
         // TODO maybe I should make the Shuffle station stand out more...
         override fun onBindViewHolder(holder: StationListAdapterViewHolder, position: Int) {
             // Bind the station name
-            holder.card.station_name.text = viewModel.getStationList(user).value!![holder.adapterPosition].name
+            holder.card.station_name.text = viewModel.getStationList(user).value!![position].name
 
-            // Bind the station art
-            Picasso.get()
-                .load(GENERIC_ART_URL)
-                .into(
-                    object : Target {
-                        override fun onPrepareLoad(placeHolderDrawable: Drawable?) {}
-
-                        override fun onBitmapLoaded(bitmap: Bitmap, from: Picasso.LoadedFrom) {
-                            holder.card.station_logo.setImageBitmap(bitmap)
-
-                            Picasso.get()
-                                .load (
-                                    viewModel.getStationList(user).value!![holder.adapterPosition].getArtUrl(
-                                        if (viewModel.getStationList(user).value!![holder.adapterPosition].isShuffle) 500 else artSize
-                                    )
-                                )
-                                // Insert into the ImageView
-                                .into(
-                                    object : Target {
-                                        override fun onPrepareLoad(placeHolderDrawable: Drawable?) {}
-
-                                        override fun onBitmapLoaded(bitmap: Bitmap, from: Picasso.LoadedFrom) {
-                                            holder.card.station_logo.apply {
-                                                if (from == Picasso.LoadedFrom.MEMORY) {
-                                                    setImageBitmap(bitmap)
-                                                } else {
-                                                    animate().setDuration(200).alpha(0f).setListener(
-                                                        object : Animator.AnimatorListener {
-                                                            override fun onAnimationStart(animation: Animator?) {}
-                                                            override fun onAnimationCancel(animation: Animator?) {}
-                                                            override fun onAnimationRepeat(animation: Animator?) {}
-
-                                                            override fun onAnimationEnd(animation: Animator?) {
-                                                                setImageBitmap(bitmap)
-                                                                animate().setDuration(200).alpha(1f).start()
-                                                            }
-                                                        }
-                                                    ).start()
-                                                }
-                                            }
-                                        }
-
-                                        override fun onBitmapFailed(e: Exception, errorDrawable: Drawable?) {
-                                            if (e is IOException) {
-                                                (requireActivity() as MainActivity).networkError()
-                                            }
-                                        }
-                                    }
-                                )
-                        }
-
-                        override fun onBitmapFailed(e: Exception, errorDrawable: Drawable?) {
-                            if (e is IOException) {
-                                (requireActivity() as MainActivity).networkError()
-                            }
-                        }
-                    }
+            // Bind the station art TODO FINISH IMPLEMENTING GLIDE
+            GlideApp
+                .with(this@StationListFragment)
+                .load(
+                    viewModel.getStationList(user).value!![position].getArtUrl(
+                        if (viewModel.getStationList(user).value!![position].isShuffle) 500 else artSize
+                    )
                 )
+                .transform(RoundedCorners(8))
+                .transition(DrawableTransitionOptions.withCrossFade())
+                .thumbnail(
+                    GlideApp
+                        .with(this@StationListFragment)
+                        .load(GENERIC_ART_URL)
+                        .transform(RoundedCorners(8))
+                )
+                .into(holder.card.station_logo)
 
             holder.card.setOnClickListener {
                 findNavController().navigate(
                     R.id.playlistFragment,
-                    bundleOf (
+                    bundleOf(
                         "user" to user,
                         "stations" to viewModel.getStationList(user).value,
                         "stationIndex" to holder.adapterPosition

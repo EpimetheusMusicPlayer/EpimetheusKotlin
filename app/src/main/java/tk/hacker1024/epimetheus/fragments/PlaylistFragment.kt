@@ -1,6 +1,5 @@
 package tk.hacker1024.epimetheus.fragments
 
-import android.animation.Animator
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Color
@@ -23,15 +22,21 @@ import androidx.navigation.get
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import kotlinx.android.synthetic.main.fragment_playlist.*
 import kotlinx.android.synthetic.main.fragment_playlist.view.*
 import kotlinx.android.synthetic.main.song_card_inactive.view.*
+import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.service.MusicService
 import tk.hacker1024.libepimetheus.User
 
 // TODO BUG: When switching to another station without stopping the old station, the loading widget won't show; the screen will be blank until it loads.
+
+private const val ALBUM_ART_CORNER_RADIUS = 24
 
 class PlaylistFragment : Fragment() {
     private var mediaController: MediaControllerCompat? = null
@@ -58,8 +63,14 @@ class PlaylistFragment : Fragment() {
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?) =
-        inflater.inflate(R.layout.fragment_playlist, container, false)!!
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        return inflater.inflate(R.layout.fragment_playlist, container, false).apply {
+            song_list.apply {
+                layoutManager = LinearLayoutManager(requireContext())
+                adapter = SongRecyclerAdapter()
+            }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         if (arguments!!.getInt("stationIndex") == -1 && !MediaControlFragment.isServiceRunning(requireContext())) {
@@ -68,11 +79,6 @@ class PlaylistFragment : Fragment() {
             view.empty.setOnClickListener {
                 findNavController().navigateUp()
             }
-        }
-
-        view.song_list.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            adapter = SongRecyclerAdapter()
         }
     }
 
@@ -202,10 +208,13 @@ class PlaylistFragment : Fragment() {
                 holder.songCard.song_artist.text = holder.queueItemDescription.subtitle
                 holder.songCard.song_album.text = holder.queueItemDescription.description
 
-                // Bind the album art
-                holder.songCard.song_album_art.setImageBitmap(
-                        holder.queueItemDescription.iconBitmap
-                )
+                GlideApp
+                    .with(this@PlaylistFragment)
+                    .asBitmap()
+                    .load(holder.queueItemDescription.iconBitmap)
+                    .diskCacheStrategy(DiskCacheStrategy.NONE)
+                    .transform(RoundedCorners(ALBUM_ART_CORNER_RADIUS))
+                    .into(holder.songCard.song_album_art)
 
                 // Skip to the song on click.
                 holder.songCard.setOnClickListener {
@@ -275,21 +284,14 @@ class PlaylistFragment : Fragment() {
                 @Suppress("UNCHECKED_CAST")
                 (payloads[0] as Map<String, Boolean>).apply {
                     if (get("art") == true) {
-                        holder.songCard.song_album_art.apply {
-                            val bitmap = mediaController!!.queue[holder.adapterPosition].description.iconBitmap
-                            animate().setDuration(200).alpha(0f).setListener(
-                                object : Animator.AnimatorListener {
-                                    override fun onAnimationStart(animation: Animator?) {}
-                                    override fun onAnimationCancel(animation: Animator?) {}
-                                    override fun onAnimationRepeat(animation: Animator?) {}
-
-                                    override fun onAnimationEnd(animation: Animator?) {
-                                        setImageBitmap(bitmap)
-                                        animate().setDuration(200).alpha(1f).start()
-                                    }
-                                }
-                            ).start()
-                        }
+                        GlideApp
+                            .with(this@PlaylistFragment)
+                            .load(holder.queueItemDescription.iconBitmap)
+                            .diskCacheStrategy(DiskCacheStrategy.NONE)
+                            .transition(DrawableTransitionOptions.withCrossFade())
+                            .transform(RoundedCorners(ALBUM_ART_CORNER_RADIUS))
+                            .placeholder(holder.songCard.song_album_art.drawable)
+                            .into(holder.songCard.song_album_art)
                     }
                     if (get("rating") == true) {
                         holder.queueItemDescription.extras!!.getParcelable<RatingCompat>("settingFeedback")!!.apply {

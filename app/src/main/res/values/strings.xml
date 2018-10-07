@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">Epimetheus</string>
     <string name="signout">Sign out</string>
+    <string name="profile_picture">Profile picture</string>
 </resources>

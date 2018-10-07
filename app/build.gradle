@@ -4,6 +4,8 @@ apply plugin: 'kotlin-android'
 
 apply plugin: 'kotlin-android-extensions'
 
+apply plugin: 'kotlin-kapt'
+
 apply plugin: "androidx.navigation.safeargs"
 
 android {
@@ -61,6 +63,10 @@ dependencies {
 //    implementation "com.google.android.exoplayer:extension-okhttp:$exoplayer_version"
     implementation 'com.github.google:ExoPlayer:dev-v2-SNAPSHOT'
 
-    implementation 'com.squareup.picasso:picasso:2.71828'
-    implementation 'com.makeramen:roundedimageview:2.3.0'
+    def glide_version = "4.8.0"
+    implementation "com.github.bumptech.glide:glide:$glide_version"
+    kapt "com.github.bumptech.glide:compiler:$glide_version"
+    implementation ("com.github.bumptech.glide:recyclerview-integration:$glide_version") {
+        transitive = false
+    }
 }
