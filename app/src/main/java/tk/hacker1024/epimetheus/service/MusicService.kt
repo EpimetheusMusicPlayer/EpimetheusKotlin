@@ -249,7 +249,7 @@ internal class MusicService : MediaBrowserServiceCompat() {
 
         stations = intent.getParcelableArrayListExtra<Station>("stations").let { newStations ->
             List(newStations.size) { i -> StationBitmapHolder(newStations[i]) }.also {
-                if (::stations.isInitialized && stations != it) {
+                if (::stations.isInitialized && station != newStations[stationIndex]) {
                     mediaPlayer.playWhenReady = false
                     playlist.clearSongs()
                 }
