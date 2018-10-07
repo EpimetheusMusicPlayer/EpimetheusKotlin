@@ -536,7 +536,7 @@ internal class MusicService : MediaBrowserServiceCompat() {
         }
 
         override fun getMediaDescription(player: Player, windowIndex: Int): MediaDescriptionCompat {
-            playlist.loadBitmapIfNeeded(windowIndex)
+            try { playlist.loadBitmapIfNeeded(windowIndex) } catch (e: IndexOutOfBoundsException) {}
             return MediaDescriptionCompat.Builder()
                 .setMediaId(windowIndex.toString())
                 // Sometimes, I'll randomly get an IndexOutOfBoundsException. I have no idea why, and I've never seen any "null"s in the notification.
