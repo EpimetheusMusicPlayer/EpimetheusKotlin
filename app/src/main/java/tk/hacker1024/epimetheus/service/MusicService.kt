@@ -311,6 +311,11 @@ internal class MusicService : MediaBrowserServiceCompat() {
                             MediaDescriptionCompat.Builder()
                                 .setMediaId(i.toString())
                                 .setTitle(stations[i].station.name)
+                                .run {
+                                    if (stationIndex == i) {
+                                        setSubtitle("Playing now")
+                                    } else this
+                                }
                                 .setIconBitmap(stations[i].artBitmap)
                                 .setIconUri(stations[i].artUri)
                                 .build(),
@@ -332,6 +337,11 @@ internal class MusicService : MediaBrowserServiceCompat() {
                     MediaDescriptionCompat.Builder()
                         .setMediaId(itemId)
                         .setTitle(stations[itemId.toInt()].station.name)
+                        .run {
+                            if (stationIndex == itemId.toInt()) {
+                                setSubtitle("Playing now")
+                            } else this
+                        }
                         .setIconBitmap(stations[itemId.toInt()].artBitmap)
                         .setIconUri(stations[itemId.toInt()].artUri)
                         .build(),
@@ -586,10 +596,14 @@ internal class MusicService : MediaBrowserServiceCompat() {
         override fun getSupportedPrepareActions() = PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID
 
         override fun onPrepareFromMediaId(mediaId: String, extras: Bundle?) {
-            stationIndex = mediaId.toInt()
-            mediaNotificationBuilder.setSubText(station.name)
-            playlist.clearSongs()
-            GlobalScope.launch { newSong(false) }
+            if (stationIndex != mediaId.toInt()) {
+                stationIndex = mediaId.toInt()
+                mediaNotificationBuilder.setSubText(station.name)
+                playlist.clearSongs()
+                GlobalScope.launch { newSong(false) }
+            } else {
+                mediaPlayer.prepare(playlist.mediaSource, false, false)
+            }
         }
 
         override fun onCommand(
