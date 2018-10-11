@@ -76,11 +76,8 @@ internal class MusicService : MediaBrowserServiceCompat() {
     private val playerEventListener = PlayerEventListener()
     // The media session
     private lateinit var mediaSession: MediaSessionCompat
+    // The playback state builder
     private val playbackStateBuilder = PlaybackStateCompat.Builder()
-    // The media session connector
-//    private lateinit var mediaSessionConnector: MediaSessionConnector
-    // The queue navigator
-//    private lateinit var queueNavigator: QueueNavigator
     // The user object, initialized with a serialized object from the intent
     private lateinit var user: User
     // The list of stations
@@ -656,27 +653,37 @@ internal class MusicService : MediaBrowserServiceCompat() {
         override fun onTimelineChanged(timeline: Timeline, manifest: Any?, reason: Int) {
             mediaSession.setQueue(
                 List(timeline.windowCount) { i ->
-                    playlist[i].run {
+                    if (i <= playlist.size) {
+                        playlist[i].run {
+                            MediaSessionCompat.QueueItem(
+                                MediaDescriptionCompat.Builder()
+                                    .setMediaId(i.toString())
+                                    .setTitle(song.name)
+                                    .setSubtitle(song.artist)
+                                    .setDescription(song.album)
+                                    .setExtras(
+                                        Bundle().apply {
+                                            song.settingFeedback.apply {
+                                                if (isRated) putBoolean(
+                                                    "settingFeedback",
+                                                    isThumbUp
+                                                )
+                                            }
+                                            song.rating.apply {
+                                                if (isRated) putBoolean("rating", isThumbUp)
+                                            }
+                                        }
+                                    )
+                                    .setIconUri(artUri)
+                                    .setIconBitmap(artBitmap)
+                                    .build(),
+                                i.toLong()
+                            )
+                        }
+                    } else {
                         MediaSessionCompat.QueueItem(
-                            MediaDescriptionCompat.Builder()
-                                .setMediaId(i.toString())
-                                .setTitle(song.name)
-                                .setSubtitle(song.artist)
-                                .setDescription(song.album)
-                                .setExtras(
-                                    Bundle().apply {
-                                        song.settingFeedback.apply {
-                                            if (isRated) putBoolean("settingFeedback", isThumbUp)
-                                        }
-                                        song.rating.apply {
-                                            if (isRated) putBoolean("rating", isThumbUp)
-                                        }
-                                    }
-                                )
-                                .setIconUri(artUri)
-                                .setIconBitmap(artBitmap)
-                                .build(),
-                            i.toLong()
+                            MediaDescriptionCompat.Builder().build(),
+                            0
                         )
                     }
                 }
