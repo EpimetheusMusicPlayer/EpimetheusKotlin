@@ -50,6 +50,8 @@ internal const val GENERIC_ART_URL = "https://www.pandora.com/web-version/1.25.1
 private const val LOG_TAG = "EpimetheusMediaService" // This tag is used for the media session
 private const val MEDIA_NOTIFICATION_CHANNEL_ID = "media" // This is the channel ID for the media notification
 
+internal const val CUSTOM_ACTION_ADD_TIRED = "tk.hacker1024.epimetheus.addSongTired"
+
 internal const val RESULTS_BROADCAST_FILTER = "tk.hacker1024.epimetheus.serviceStateChange"
 
 internal enum class MusicServiceResults(var message: String = "") {
@@ -119,6 +121,7 @@ internal class MusicService : MediaBrowserServiceCompat() {
             PlaybackStateCompat.ACTION_SET_RATING or
             PlaybackStateCompat.ACTION_SEEK_TO
         )
+        playbackStateBuilder.addCustomAction(addTiredAction)
         mediaSession = MediaSessionCompat(this, LOG_TAG)
         mediaSession.setPlaybackState(playbackStateBuilder.build())
         mediaSession.setCallback(Callback())
@@ -548,6 +551,28 @@ internal class MusicService : MediaBrowserServiceCompat() {
             }
         }
 
+        override fun onCustomAction(action: String, extras: Bundle?) {
+            when(action) {
+                CUSTOM_ACTION_ADD_TIRED -> {
+                    if (extras == null || !extras.containsKey("songIndex")) {
+                        Log.w(LOG_TAG, "Rating set without songIndex in bundle. Not doing anything.")
+                    } else {
+                        val song = playlist[extras.getInt("songIndex")].song
+                        playlist.removeSong(extras.getInt("songIndex"))
+                        playerEventListener.onTimelineChanged(
+                            mediaPlayer.currentTimeline,
+                            null,
+                            Player.TIMELINE_CHANGE_REASON_DYNAMIC
+                        )
+                        if (extras.getInt("songIndex") == 0) newSong(false)
+                        GlobalScope.launch {
+                            song.addTired(user)
+                        }
+                    }
+                }
+            }
+        }
+
         override fun onSetRating(rating: RatingCompat, extras: Bundle) {
             if (extras.containsKey("songIndex")) {
                 GlobalScope.launch {
@@ -652,8 +677,8 @@ internal class MusicService : MediaBrowserServiceCompat() {
 
         override fun onTimelineChanged(timeline: Timeline, manifest: Any?, reason: Int) {
             mediaSession.setQueue(
-                List(timeline.windowCount) { i ->
-                    if (i <= playlist.size) {
+                List(playlist.size) { i ->
+                    if (i <= playlist.size && playlist.isNotEmpty()) {
                         playlist[i].run {
                             MediaSessionCompat.QueueItem(
                                 MediaDescriptionCompat.Builder()
@@ -796,5 +821,13 @@ internal class MusicService : MediaBrowserServiceCompat() {
             mediaSource = ConcatenatingMediaSource()
             super.clear()
         }
+    }
+
+    companion object {
+        internal val addTiredAction = PlaybackStateCompat.CustomAction.Builder(
+            CUSTOM_ACTION_ADD_TIRED,
+            "I'm tired of this song",
+            R.drawable.ic_remove_thumb_black_24dp
+        ).build()!!
     }
 }

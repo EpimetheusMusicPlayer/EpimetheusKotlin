@@ -18,6 +18,7 @@ import androidx.annotation.ColorInt
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
+import androidx.core.view.isNotEmpty
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.get
@@ -244,12 +245,23 @@ class PlaylistFragment : Fragment() {
                                     }
                                     true
                                 }
+
+                                R.id.tired -> {
+                                    mediaController!!.transportControls.sendCustomAction(
+                                        MusicService.addTiredAction,
+                                        bundleOf(
+                                            "songIndex" to holder.adapterPosition
+                                        )
+                                    )
+                                    true
+                                }
+
                                 else -> false
                             }
                         }
                         inflate(R.menu.song_menu)
                         if (holder.adapterPosition == 0) menu.removeItem(R.id.play)
-                        show()
+                        if (menu.isNotEmpty()) show()
                     }
                 }
 
