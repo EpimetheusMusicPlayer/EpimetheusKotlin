@@ -41,7 +41,7 @@
             android:layout_marginBottom="8dp"
             android:paddingStart="64dp"
             android:paddingEnd="64dp"
-            android:text="No station is playing.\nChoose a station from the station list."
+            android:text="No station is playing.\nYou can choose a station from the station list."
             android:textAlignment="center"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
