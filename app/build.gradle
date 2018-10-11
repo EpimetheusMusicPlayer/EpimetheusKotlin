@@ -57,11 +57,8 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-extensions:$lifecycle_version"
     kapt "androidx.lifecycle:lifecycle-compiler:$lifecycle_version"
 
-//    def exoplayer_version = "2.9.0"
-//    implementation "com.google.android.exoplayer:exoplayer-core:$exoplayer_version"
-//    implementation "com.google.android.exoplayer:extension-mediasession:$exoplayer_version"
-//    implementation "com.google.android.exoplayer:extension-okhttp:$exoplayer_version"
-    implementation 'com.github.google:ExoPlayer:dev-v2-SNAPSHOT'
+    def exoplayer_version = "2.9.0"
+    implementation "com.google.android.exoplayer:exoplayer-core:$exoplayer_version"
 
     def glide_version = "4.8.0"
     implementation "com.github.bumptech.glide:glide:$glide_version"

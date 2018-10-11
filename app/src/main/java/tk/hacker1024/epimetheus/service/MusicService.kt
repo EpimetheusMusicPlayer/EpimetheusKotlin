@@ -11,12 +11,13 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
-import android.os.ResultReceiver
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaDescriptionCompat
+import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.RatingCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.net.toUri
@@ -27,8 +28,6 @@ import androidx.media.app.NotificationCompat.MediaStyle
 import androidx.media.session.MediaButtonReceiver
 import androidx.preference.PreferenceManager
 import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
-import com.google.android.exoplayer2.ext.mediasession.TimelineQueueNavigator
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.ExtractorMediaSource
 import com.google.android.exoplayer2.source.MediaSource
@@ -74,19 +73,21 @@ internal class MusicService : MediaBrowserServiceCompat() {
     private lateinit var mediaNotificationBuilder: NotificationCompat.Builder
     // The media player
     private lateinit var mediaPlayer: SimpleExoPlayer
+    private val playerEventListener = PlayerEventListener()
     // The media session
     private lateinit var mediaSession: MediaSessionCompat
+    private val playbackStateBuilder = PlaybackStateCompat.Builder()
     // The media session connector
-    private lateinit var mediaSessionConnector: MediaSessionConnector
+//    private lateinit var mediaSessionConnector: MediaSessionConnector
     // The queue navigator
-    private lateinit var queueNavigator: QueueNavigator
+//    private lateinit var queueNavigator: QueueNavigator
     // The user object, initialized with a serialized object from the intent
     private lateinit var user: User
     // The list of stations
     private data class StationBitmapHolder(val station: Station, var artBitmap: Bitmap? = null, var artUri: Uri? = null)
     private lateinit var stations: List<StationBitmapHolder>
     // The station index
-    private var stationIndex = -1
+    private var stationIndex = -2
     // The station object
     private val station get() = stations[stationIndex].station
     // The song playlist. Functions added to load and remove songs. Manages an ExoPlayer ConcatenatingMediaSource.
@@ -101,23 +102,29 @@ internal class MusicService : MediaBrowserServiceCompat() {
             DefaultRenderersFactory(this),
             DefaultTrackSelector()
         )
-        mediaPlayer.addListener(PlayerEventListener())
+        mediaPlayer.addListener(playerEventListener)
         mediaPlayer.playWhenReady = false
 
         // Initialize the handler
         mediaPlayerHandler = Handler(mediaPlayer.applicationLooper)
 
         // Set up the MediaSessionCompat
-        mediaSession = MediaSessionCompat(this, LOG_TAG)
-        mediaSessionConnector = MediaSessionConnector(
-            mediaSession,
-            MediaSessionConnectorCallback(),
-            MediaSessionConnector.DefaultMediaMetadataProvider(mediaSession.controller, null)
+        playbackStateBuilder.setActions(
+            PlaybackStateCompat.ACTION_PLAY or
+            PlaybackStateCompat.ACTION_PAUSE or
+            PlaybackStateCompat.ACTION_PLAY_PAUSE or
+            PlaybackStateCompat.ACTION_STOP or
+            PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+            PlaybackStateCompat.ACTION_SKIP_TO_QUEUE_ITEM or
+            PlaybackStateCompat.ACTION_REWIND or
+            PlaybackStateCompat.ACTION_FAST_FORWARD or
+            PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID or
+            PlaybackStateCompat.ACTION_SET_RATING or
+            PlaybackStateCompat.ACTION_SEEK_TO
         )
-        queueNavigator = QueueNavigator(mediaSession)
-        mediaSessionConnector.setQueueNavigator(queueNavigator)
-        mediaSessionConnector.setPlayer(mediaPlayer, MediaPlaybackPreparer())
-        mediaSessionConnector.setRatingCallback(RatingCallback())
+        mediaSession = MediaSessionCompat(this, LOG_TAG)
+        mediaSession.setPlaybackState(playbackStateBuilder.build())
+        mediaSession.setCallback(Callback())
         sessionToken = mediaSession.sessionToken
 
         // Register the notification channel
@@ -241,8 +248,15 @@ internal class MusicService : MediaBrowserServiceCompat() {
 
         stationIndex = intent.getIntExtra("stationIndex", -1).let { newIndex ->
             if (stationIndex != newIndex) {
-                mediaPlayer.playWhenReady = false
-                playlist.clearSongs()
+                if (stationIndex != -2) {
+                    mediaPlayer.playWhenReady = false
+                    playlist.clearSongs()
+                }
+                mediaSession.setExtras(
+                    bundleOf(
+                        "stationIndex" to newIndex
+                    )
+                )
             }
             newIndex
         }
@@ -378,38 +392,47 @@ internal class MusicService : MediaBrowserServiceCompat() {
     }
 
     private fun updateMetadata() {
-        try {
-            mediaNotificationBuilder
-                .setContentTitle(playlist[0].song.name)
-                .setContentText("${playlist[0].song.artist} - ${playlist[0].song.album}")
-                .setLargeIcon(queueNavigator.getMediaDescription(mediaPlayer, 0).iconBitmap)
-            updateNotification()
+        mediaPlayerHandler.post {
+            try {
+                mediaNotificationBuilder
+                    .setContentTitle(playlist[0].song.name)
+                    .setContentText("${playlist[0].song.artist} - ${playlist[0].song.album}")
+                    .setLargeIcon(playlist[0].artBitmap)
+                updateNotification()
 
-            // TODO this stuff might not be necessary. Must test on MIUI.
-//            val metadataBuilder = MediaMetadataCompat.Builder()
-//                .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, mediaPlayer.duration)
-//                .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, playlist[0].songName)
-//                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, playlist[0].songName)
-//                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, playlist[0].albumName)
-//                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, playlist[0].artistName)
-//            mediaSession.setMetadata(metadataBuilder.build())
+                mediaSession.setMetadata(
+                    MediaMetadataCompat.Builder()
+                        .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, mediaPlayer.duration)
+                        .putString(
+                            MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE,
+                            playlist[0].song.name
+                        )
+                        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, playlist[0].song.name)
+                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, playlist[0].song.album)
+                        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, playlist[0].song.artist)
+                        .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, playlist[0].artBitmap)
+                        .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, playlist[0].artUri.toString())
+                        .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, playlist[0].artBitmap)
+                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, playlist[0].artUri.toString())
+                        .build()
+                )
 
-            GlobalScope.launch {
-                try {
-//                    val albumArt = Picasso.get().load(playlist[0].albumArtUri).get()
-//                    metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, albumArt)
-//                    metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, albumArt)
-//                    mediaSession.setMetadata(metadataBuilder.build())
+                playlist.loadBitmapIfNeeded(0) {
+                    mediaNotificationBuilder.setLargeIcon(it)
+                    updateNotification()
 
-//                    mediaNotificationBuilder.setLargeIcon(albumArt)
-//                    NotificationManagerCompat.from(this@MusicService)
-//                        .notify(1, mediaNotificationBuilder.build())
-                } catch (e: IllegalArgumentException) {
-                } catch (e: IOException) {
+                    mediaSession.setMetadata(
+                        MediaMetadataCompat.Builder(mediaSession.controller.metadata)
+                            .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, playlist[0].artBitmap)
+                            .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, playlist[0].artUri.toString())
+                            .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, playlist[0].artBitmap)
+                            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, playlist[0].artUri.toString())
+                            .build()
+                    )
                 }
+            } catch (e: IOException) {
+                stop(MusicServiceResults.ERROR_NETWORK)
             }
-        } catch (e: IOException) {
-            stop(MusicServiceResults.ERROR_INTERNAL)
         }
     }
 
@@ -464,6 +487,107 @@ internal class MusicService : MediaBrowserServiceCompat() {
         )
     }
 
+    inner class Callback : MediaSessionCompat.Callback() {
+        override fun onPause() {
+            mediaPlayer.playWhenReady = false
+            mediaSession.setPlaybackState(
+                playbackStateBuilder.setState(
+                    PlaybackStateCompat.STATE_PAUSED,
+                    mediaPlayer.currentPosition,
+                    mediaPlayer.playbackParameters.speed
+                ).build()
+            )
+            setNotificationPlayButton()
+        }
+
+        override fun onPlay() {
+            mediaPlayer.playWhenReady = true
+            mediaSession.setPlaybackState(
+                playbackStateBuilder.setState(
+                    PlaybackStateCompat.STATE_PLAYING,
+                    mediaPlayer.currentPosition,
+                    mediaPlayer.playbackParameters.speed
+                ).build()
+            )
+            setNotificationPauseButton()
+        }
+
+        override fun onFastForward() {
+            mediaPlayer.seekTo(mediaPlayer.currentPosition + 1500)
+        }
+
+        override fun onRewind() {
+            mediaPlayer.seekTo(mediaPlayer.currentPosition - 1500)
+        }
+
+        override fun onSeekTo(pos: Long) {
+            mediaPlayer.seekTo(pos)
+        }
+
+        override fun onStop() {
+            stop()
+        }
+
+        override fun onSkipToNext() {
+            newSong(true)
+        }
+
+        override fun onSkipToQueueItem(id: Long) {
+            for (i in 0 until id) {
+                playlist.removeSong(0)
+            }
+            newSong(false)
+        }
+
+        override fun onPlayFromMediaId(mediaId: String, extras: Bundle) {
+            if (stationIndex != mediaId.toInt()) {
+                stationIndex = mediaId.toInt()
+                mediaNotificationBuilder.setSubText(station.name)
+                playlist.clearSongs()
+                GlobalScope.launch { newSong(false) }
+            } else {
+                mediaPlayer.prepare(playlist.mediaSource, false, false)
+            }
+        }
+
+        override fun onSetRating(rating: RatingCompat, extras: Bundle) {
+            if (extras.containsKey("songIndex")) {
+                GlobalScope.launch {
+                    try {
+                        if (rating.isRated) {
+                            playlist[extras.getInt("songIndex")].song.addFeedback(rating.isThumbUp, user)
+                        } else {
+                            playlist[extras.getInt("songIndex")].song.deleteFeedback(user)
+                        }
+                        mediaPlayerHandler.post {
+                            playerEventListener.onTimelineChanged(
+                                mediaPlayer.currentTimeline,
+                                null,
+                                Player.TIMELINE_CHANGE_REASON_DYNAMIC
+                            )
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        when (e) {
+                            is IOException -> stop(MusicServiceResults.ERROR_NETWORK)
+                            is PandoraException -> stop(MusicServiceResults.ERROR_PANDORA)
+                            else -> {
+                                Log.e(LOG_TAG, e.message, e)
+                                stop(MusicServiceResults.ERROR_INTERNAL)
+                            }
+                        }
+                    }
+                }
+            } else {
+                Log.w(LOG_TAG, "Rating set without songIndex in bundle. Not doing anything.")
+            }
+        }
+
+        override fun onSetRating(rating: RatingCompat?) {
+            Log.w(LOG_TAG, "Rating set without songIndex in bundle. Not doing anything.")
+        }
+    }
+
     private inner class PlayerEventListener : Player.EventListener {
         override fun onPositionDiscontinuity(reason: Int) {
             if (reason == Player.DISCONTINUITY_REASON_PERIOD_TRANSITION) {
@@ -475,216 +599,104 @@ internal class MusicService : MediaBrowserServiceCompat() {
             stop(MusicServiceResults.ERROR_NETWORK)
         }
 
-        override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {}
-        override fun onSeekProcessed() {}
-        override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {}
+        override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+            when (playbackState) {
+                Player.STATE_BUFFERING -> playbackStateBuilder.setState(
+                    PlaybackStateCompat.STATE_BUFFERING,
+                    mediaPlayer.currentPosition,
+                    1f
+                )
+
+                Player.STATE_READY -> playbackStateBuilder.setState(
+                    if (mediaPlayer.playWhenReady) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
+                    mediaPlayer.currentPosition,
+                    mediaPlayer.playbackParameters.speed
+                )
+
+                Player.STATE_IDLE -> {
+                    playbackStateBuilder.setState(
+                        PlaybackStateCompat.STATE_NONE,
+                        mediaPlayer.currentPosition,
+                        mediaPlayer.playbackParameters.speed
+                    )
+                }
+
+                Player.STATE_ENDED -> {
+                    playbackStateBuilder.setState(
+                        PlaybackStateCompat.STATE_NONE,
+                        mediaPlayer.currentPosition,
+                        mediaPlayer.playbackParameters.speed
+                    )
+                }
+            }
+            mediaSession.setPlaybackState(playbackStateBuilder.build())
+        }
+
+        override fun onSeekProcessed() {
+            mediaSession.setPlaybackState(
+                playbackStateBuilder.setState(
+                    mediaSession.controller.playbackState.state,
+                    mediaPlayer.currentPosition,
+                    mediaPlayer.playbackParameters.speed
+                ).build()
+            )
+        }
+
+        override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
+            mediaSession.setPlaybackState(
+                playbackStateBuilder.setState(
+                    mediaSession.controller.playbackState.state,
+                    mediaPlayer.currentPosition,
+                    playbackParameters.speed
+                ).build()
+            )
+        }
+
+        override fun onTimelineChanged(timeline: Timeline, manifest: Any?, reason: Int) {
+            mediaSession.setQueue(
+                List(timeline.windowCount) { i ->
+                    playlist[i].run {
+                        MediaSessionCompat.QueueItem(
+                            MediaDescriptionCompat.Builder()
+                                .setMediaId(i.toString())
+                                .setTitle(song.name)
+                                .setSubtitle(song.artist)
+                                .setDescription(song.album)
+                                .setExtras(
+                                    Bundle().apply {
+                                        song.settingFeedback.apply {
+                                            if (isRated) putBoolean("settingFeedback", isThumbUp)
+                                        }
+                                        song.rating.apply {
+                                            if (isRated) putBoolean("rating", isThumbUp)
+                                        }
+                                    }
+                                )
+                                .setIconUri(artUri)
+                                .setIconBitmap(artBitmap)
+                                .build(),
+                            i.toLong()
+                        )
+                    }
+                }
+            )
+        }
+
         override fun onTracksChanged(
             trackGroups: TrackGroupArray,
             trackSelections: TrackSelectionArray
-        ) {
-        }
+        ) {}
 
         override fun onLoadingChanged(isLoading: Boolean) {}
         override fun onRepeatModeChanged(repeatMode: Int) {}
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {}
-        override fun onTimelineChanged(timeline: Timeline, manifest: Any?, reason: Int) {}
-    }
-
-    private inner class MediaSessionConnectorCallback : MediaSessionConnector.PlaybackController {
-        override fun getSupportedPlaybackActions(player: Player?) =
-            PlaybackStateCompat.ACTION_PLAY or
-                    PlaybackStateCompat.ACTION_PAUSE or
-                    PlaybackStateCompat.ACTION_REWIND or
-                    PlaybackStateCompat.ACTION_FAST_FORWARD or
-                    PlaybackStateCompat.ACTION_STOP
-
-        override fun onPlay(player: Player) {
-            if (!player.playWhenReady) {
-                player.playWhenReady = true
-                setNotificationPauseButton()
-            }
-        }
-
-        override fun onPause(player: Player) {
-            if (player.playWhenReady) {
-                player.playWhenReady = false
-                setNotificationPlayButton()
-            }
-        }
-
-        override fun onRewind(player: Player) {
-            player.seekTo(player.currentPosition - 15000)
-        }
-
-        override fun onFastForward(player: Player) {
-            player.seekTo(player.currentPosition + 15000)
-        }
-
-        override fun onStop(player: Player) {
-            stop()
-        }
-
-        override fun onCommand(
-            player: Player,
-            command: String,
-            extras: Bundle,
-            cb: ResultReceiver
-        ) {
-            cb.send(0, null)
-        }
-
-        override fun onSeekTo(player: Player, pos: Long) {}
-        override fun onSetShuffleMode(player: Player?, shuffleMode: Int) {}
-        override fun onSetRepeatMode(player: Player?, repeatMode: Int) {}
-        override fun getCommands() = null
-    }
-
-    private inner class QueueNavigator(mediaSession: MediaSessionCompat) :
-        TimelineQueueNavigator(mediaSession) {
-        override fun getSupportedQueueNavigatorActions(player: Player?): Long {
-            return PlaybackStateCompat.ACTION_SKIP_TO_NEXT or PlaybackStateCompat.ACTION_SKIP_TO_QUEUE_ITEM
-        }
-
-        override fun getMediaDescription(player: Player, windowIndex: Int): MediaDescriptionCompat {
-            try { playlist.loadBitmapIfNeeded(windowIndex) } catch (e: IndexOutOfBoundsException) {}
-            return MediaDescriptionCompat.Builder()
-                .setMediaId(windowIndex.toString())
-                // Sometimes, I'll randomly get an IndexOutOfBoundsException. I have no idea why, and I've never seen any "null"s in the notification.
-                .run {
-                    try {
-                        setTitle(playlist[windowIndex].song.name)
-                        setSubtitle(playlist[windowIndex].song.artist)
-                        setDescription(playlist[windowIndex].song.album)
-                    } catch (e: IndexOutOfBoundsException) {
-                        this
-                    }
-                }
-                .setExtras(
-                    bundleOf(
-                        "settingFeedback" to
-                                try {
-                                    playlist[windowIndex].song.settingFeedback
-                                } catch (e: IndexOutOfBoundsException) {
-                                    RatingCompat.newUnratedRating(RatingCompat.RATING_THUMB_UP_DOWN)
-                                },
-                        "rating" to
-                                try {
-                                    playlist[windowIndex].song.rating
-                                } catch (e: IndexOutOfBoundsException) {
-                                    RatingCompat.newUnratedRating(RatingCompat.RATING_THUMB_UP_DOWN)
-                                }
-                    )
-                )
-                .setIconBitmap(try { playlist[windowIndex].artBitmap } catch (e: IndexOutOfBoundsException) { SongBitmapHolder.genericBitmap })
-                .setIconUri(try { playlist[windowIndex].artUri } catch (e: IndexOutOfBoundsException) { SongBitmapHolder.genericUri })
-                .build()
-        }
-
-        override fun onSkipToNext(player: Player?) {
-            newSong(true)
-        }
-
-        override fun onSkipToQueueItem(player: Player, id: Long) {
-            for (i in 0 until id) {
-                playlist.removeSong(0)
-            }
-            newSong(false)
-        }
-    }
-
-    private inner class MediaPlaybackPreparer : MediaSessionConnector.PlaybackPreparer {
-        override fun getSupportedPrepareActions() = PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID
-
-        override fun onPrepareFromMediaId(mediaId: String, extras: Bundle?) {
-            if (stationIndex != mediaId.toInt()) {
-                stationIndex = mediaId.toInt()
-                mediaNotificationBuilder.setSubText(station.name)
-                playlist.clearSongs()
-                GlobalScope.launch { newSong(false) }
-            } else {
-                mediaPlayer.prepare(playlist.mediaSource, false, false)
-            }
-        }
-
-        override fun onCommand(
-            player: Player,
-            command: String,
-            extras: Bundle,
-            cb: ResultReceiver
-        ) {
-            cb.send(0, null)
-        }
-
-        override fun getCommands() = null
-        override fun onPrepareFromSearch(query: String, extras: Bundle?) {}
-        override fun onPrepareFromUri(uri: Uri, extras: Bundle?) {}
-        override fun onPrepare() {}
-    }
-
-    private inner class RatingCallback : MediaSessionConnector.RatingCallback {
-        override fun onSetRating(player: Player, rating: RatingCompat, extras: Bundle) {
-            if (extras.containsKey("songIndex")) {
-                GlobalScope.launch {
-                    try {
-                        if (rating.isRated) {
-                            playlist[extras.getInt("songIndex")].song.addFeedback(rating.isThumbUp, user)
-                        } else {
-                            playlist[extras.getInt("songIndex")].song.deleteFeedback(user)
-                        }
-                        mediaPlayerHandler.post {
-                            queueNavigator.onTimelineChanged(mediaPlayer)
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        when (e) {
-                            is IOException -> stop(MusicServiceResults.ERROR_NETWORK)
-                            is PandoraException -> stop(MusicServiceResults.ERROR_PANDORA)
-                            else -> stop(MusicServiceResults.ERROR_INTERNAL)
-                        }
-                    }
-                }
-            } else {
-                onSetRating(player, rating)
-            }
-        }
-
-        override fun onSetRating(player: Player, rating: RatingCompat) {
-            GlobalScope.launch {
-                try {
-                    if (rating.isRated) {
-                        playlist[0].song.addFeedback(rating.isThumbUp, user)
-                    } else {
-                        playlist[0].song.deleteFeedback(user)
-                    }
-                    mediaPlayerHandler.post {
-                        queueNavigator.onTimelineChanged(mediaPlayer)
-                    }
-                } catch (e: Exception) {
-                    when (e) {
-                        is IOException -> stop(MusicServiceResults.ERROR_NETWORK)
-                        is PandoraException -> stop(MusicServiceResults.ERROR_PANDORA)
-                        else -> stop(MusicServiceResults.ERROR_INTERNAL)
-                    }
-                }
-            }
-        }
-
-        override fun getCommands() = null
-
-        override fun onCommand(
-            player: Player,
-            command: String,
-            extras: Bundle,
-            cb: ResultReceiver
-        ) {
-            cb.send(0, null)
-        }
     }
 
     data class SongBitmapHolder(
         internal val song: Song,
         internal var artBitmap: Bitmap = genericBitmap,
-        internal var artUri: Uri = genericUri
+        internal var artUri: Uri = genericUri,
+        internal var loaded: Boolean = false
     ) {
         companion object {
             internal lateinit var genericBitmap: Bitmap
@@ -728,36 +740,40 @@ internal class MusicService : MediaBrowserServiceCompat() {
             }
         }
 
-        internal fun loadBitmapIfNeeded(index: Int) {
-            if (get(index).artUri == SongBitmapHolder.genericUri) {
-                GlobalScope.launch {
-                    get(index).song.getArtUrl(artSize).also {
-                        GlideApp
-                            .with(this@MusicService)
-                            .asBitmap()
-                            .load(it)
-                            .submit()
-                            .apply {
-                                get(index).apply {
-                                    it.toUri().also { newUri ->
-                                        get()
-                                        if (artUri == SongBitmapHolder.genericUri) {
-                                            artBitmap = get()
-                                            artUri = newUri
-                                            mediaPlayerHandler.post {
-                                                queueNavigator.onTimelineChanged(mediaPlayer)
+        internal fun loadBitmapIfNeeded(index: Int, callback: ((bitmap: Bitmap) -> Unit)? = null) {
+            GlobalScope.launch {
+                if (index <= lastIndex) {
+                    if (!get(index).loaded) {
+                        get(index).song.getArtUrl(artSize).also {
+                            GlideApp
+                                .with(this@MusicService)
+                                .asBitmap()
+                                .load(it)
+                                .submit()
+                                .apply {
+                                    get(index).apply {
+                                        it.toUri().also { newUri ->
+                                            get()
+                                            if (!loaded) {
+                                                artBitmap = get()
+                                                artUri = newUri
+                                                loaded = true
+
+                                                mediaPlayerHandler.post {
+                                                    playerEventListener.onTimelineChanged(
+                                                        mediaPlayer.currentTimeline,
+                                                        null,
+                                                        Player.TIMELINE_CHANGE_REASON_DYNAMIC
+                                                    )
+                                                }
                                             }
+                                            callback?.invoke(artBitmap)
                                         }
                                     }
                                 }
-
-                                if (index == 0) {
-                                    GlobalScope.launch {
-                                        mediaNotificationBuilder.setLargeIcon(get())
-                                        updateNotification()
-                                    }
-                                }
-                            }
+                        }
+                    } else {
+                        callback?.invoke(get(index).artBitmap)
                     }
                 }
             }

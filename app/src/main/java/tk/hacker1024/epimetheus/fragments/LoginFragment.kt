@@ -45,8 +45,6 @@ internal const val AUTH_SHARED_PREFS_NAME = "user"
 private const val EMAIL_KEY = "email"
 private const val PASSWORD_KEY = "password"
 
-//TODO (1) build settings page; add logout option
-
 class LoginFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_login, container, false)

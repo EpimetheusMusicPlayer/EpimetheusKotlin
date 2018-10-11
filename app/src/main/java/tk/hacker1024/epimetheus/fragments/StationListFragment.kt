@@ -140,7 +140,7 @@ class StationListFragment : Fragment() {
             // Bind the station name
             holder.card.station_name.text = viewModel.getStationList(user).value!![position].name
 
-            // Bind the station art TODO FINISH IMPLEMENTING GLIDE
+            // Bind the station art
             GlideApp
                 .with(this@StationListFragment)
                 .load(
@@ -164,7 +164,8 @@ class StationListFragment : Fragment() {
                     bundleOf(
                         "user" to user,
                         "stations" to viewModel.getStationList(user).value,
-                        "stationIndex" to holder.adapterPosition
+                        "stationIndex" to holder.adapterPosition,
+                        "start" to true
                     )
                 )
             }
