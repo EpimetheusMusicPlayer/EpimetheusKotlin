@@ -144,6 +144,7 @@ internal class MusicService : MediaBrowserServiceCompat() {
             this,
             MEDIA_NOTIFICATION_CHANNEL_ID
         )
+            .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
             .setContentIntent(
                 PendingIntent.getActivity(
                     this,
@@ -155,7 +156,7 @@ internal class MusicService : MediaBrowserServiceCompat() {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
-            .setSmallIcon(android.R.drawable.sym_def_app_icon)
+            .setSmallIcon(R.drawable.ic_epimetheus_outline)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .addAction(
                 R.drawable.ic_stop_black_24dp,
