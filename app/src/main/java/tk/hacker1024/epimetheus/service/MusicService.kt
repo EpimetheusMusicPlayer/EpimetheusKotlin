@@ -153,7 +153,7 @@ internal class MusicService : MediaBrowserServiceCompat() {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
-            .setSmallIcon(R.drawable.ic_epimetheus_outline)
+            .setSmallIcon(R.drawable.ic_epimetheus_notification)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .addAction(
                 R.drawable.ic_stop_black_24dp,
