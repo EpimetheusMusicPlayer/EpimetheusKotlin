@@ -15,6 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.annotation.ColorInt
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
@@ -225,17 +226,30 @@ class PlaylistFragment : Fragment() {
                     .transform(RoundedCorners(ALBUM_ART_CORNER_RADIUS))
                     .into(holder.songCard.song_album_art)
 
-                // Skip to the song on click.
+                // Show menu on click.
                 holder.songCard.setOnClickListener {
-                    if (holder.adapterPosition != 0) {
-                        colorSong(
-                            holder.songCard,
-                            true,
-                            if (holder.queueItemDescription.extras!!.containsKey("rating"))
-                                holder.queueItemDescription.extras!!.getBoolean("rating")
-                            else null
-                        )
-                        mediaController!!.transportControls.skipToQueueItem(holder.adapterPosition.toLong())
+                    PopupMenu(requireContext(), it).apply {
+                        setOnMenuItemClickListener { menuItem ->
+                            when (menuItem.itemId) {
+                                R.id.play -> {
+                                    if (holder.adapterPosition != 0) {
+                                        colorSong(
+                                            holder.songCard,
+                                            true,
+                                            if (holder.queueItemDescription.extras!!.containsKey("rating"))
+                                                holder.queueItemDescription.extras!!.getBoolean("rating")
+                                            else null
+                                        )
+                                        mediaController!!.transportControls.skipToQueueItem(holder.adapterPosition.toLong())
+                                    }
+                                    true
+                                }
+                                else -> false
+                            }
+                        }
+                        inflate(R.menu.song_menu)
+                        if (holder.adapterPosition == 0) menu.removeItem(R.id.play)
+                        show()
                     }
                 }
 
