@@ -1,8 +1,8 @@
 package tk.hacker1024.epimetheus.dialogs
 
-import android.app.AlertDialog
 import android.content.Context
 import android.content.DialogInterface
+import androidx.appcompat.app.AlertDialog
 import tk.hacker1024.epimetheus.R
 
 fun showLocationErrorDialog(
