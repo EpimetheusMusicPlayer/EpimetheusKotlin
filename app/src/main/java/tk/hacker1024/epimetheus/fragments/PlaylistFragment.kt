@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.isNotEmpty
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.get
 import androidx.recyclerview.widget.DiffUtil
@@ -28,11 +29,11 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import kotlinx.android.synthetic.main.fragment_playlist.*
 import kotlinx.android.synthetic.main.fragment_playlist.view.*
 import kotlinx.android.synthetic.main.song_card_inactive.view.*
+import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.service.MusicService
-import tk.hacker1024.libepimetheus.User
 
 private const val ALBUM_ART_CORNER_RADIUS = 24
 
@@ -62,7 +63,6 @@ class PlaylistFragment : Fragment() {
         if (arguments!!.getBoolean("start")) {
             findNavController().graph[R.id.playlistFragment].setDefaultArguments(
                 bundleOf(
-                    "user" to arguments!!.getParcelable<User>("user"),
                     "stationIndex" to arguments!!.getInt("stationIndex"),
                     "stations" to null,
                     "start" to false
@@ -72,7 +72,7 @@ class PlaylistFragment : Fragment() {
             ContextCompat.startForegroundService(
                 requireContext(),
                 Intent(context, MusicService::class.java)
-                    .putExtra("pandoraUserObject", arguments!!.getParcelable<User>("user"))
+                    .putExtra("pandoraUserObject", ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].user.value!!)
                     .putExtra("stationIndex", arguments!!.getInt("stationIndex"))
                     .putParcelableArrayListExtra("stations", arguments!!.getParcelableArrayList("stations"))
             )

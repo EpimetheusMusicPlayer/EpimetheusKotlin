@@ -27,7 +27,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.MainActivity
-import tk.hacker1024.epimetheus.PandoraViewModel
+import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.dialogs.showLocationErrorDialog
 import tk.hacker1024.epimetheus.dialogs.showNetworkErrorDialog
@@ -116,15 +116,11 @@ class LoginFragment : Fragment() {
                 findNavController().apply {
                     graph.startDestination = R.id.stationListFragment
                     requireActivity().runOnUiThread {
-                        navigate(
-                            LoginFragmentDirections.actionLoginFragmentToStationListFragment().setUser(user)
+                        ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].user.postValue(
+                            user
                         )
-                        ViewModelProviders.of(requireActivity())[PandoraViewModel::class.java].userDetails.postValue(
-                            hashMapOf(
-                                "username" to user.username,
-                                "email" to user.email,
-                                "profilePicUri" to user.profilePicUri
-                            )
+                        navigate(
+                            LoginFragmentDirections.actionLoginFragmentToStationListFragment()
                         )
                         NavigationUI.setupActionBarWithNavController(requireActivity() as AppCompatActivity, findNavController(), requireActivity().drawer_layout)
                         requireActivity().drawer_layout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.START)

@@ -27,6 +27,7 @@ import androidx.media.MediaBrowserServiceCompat
 import androidx.media.app.NotificationCompat.MediaStyle
 import androidx.media.session.MediaButtonReceiver
 import androidx.preference.PreferenceManager
+import com.bumptech.glide.load.engine.GlideException
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.ExtractorMediaSource
@@ -786,19 +787,23 @@ internal class MusicService : MediaBrowserServiceCompat() {
                                 .apply {
                                     get(index).apply {
                                         it.toUri().also { newUri ->
-                                            get()
-                                            if (!loaded) {
-                                                artBitmap = get()
-                                                artUri = newUri
-                                                loaded = true
+                                            try {
+                                                get()
+                                                if (!loaded) {
+                                                    artBitmap = get()
+                                                    artUri = newUri
+                                                    loaded = true
 
-                                                mediaPlayerHandler.post {
-                                                    playerEventListener.onTimelineChanged(
-                                                        mediaPlayer.currentTimeline,
-                                                        null,
-                                                        Player.TIMELINE_CHANGE_REASON_DYNAMIC
-                                                    )
+                                                    mediaPlayerHandler.post {
+                                                        playerEventListener.onTimelineChanged(
+                                                            mediaPlayer.currentTimeline,
+                                                            null,
+                                                            Player.TIMELINE_CHANGE_REASON_DYNAMIC
+                                                        )
+                                                    }
                                                 }
+                                            } catch (e: GlideException) {
+                                                stop(MusicServiceResults.ERROR_NETWORK)
                                             }
                                             callback?.invoke(artBitmap)
                                         }

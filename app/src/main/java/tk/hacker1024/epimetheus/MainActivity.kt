@@ -2,7 +2,6 @@ package tk.hacker1024.epimetheus
 
 import android.content.*
 import android.media.AudioManager
-import android.net.Uri
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
@@ -39,8 +38,8 @@ import java.io.IOException
 
 // TODO manage audio focus
 
-internal class PandoraViewModel : ViewModel() {
-    internal var userDetails = MutableLiveData<HashMap<String, Any>>()
+internal class EpimetheusViewModel : ViewModel() {
+    internal var user = MutableLiveData<User>()
 
     private lateinit var stationList: MutableLiveData<ArrayList<Station>?>
     internal fun getStationList(user: User): MutableLiveData<ArrayList<Station>?> {
@@ -78,12 +77,12 @@ class MainActivity : AppCompatActivity() {
         drawer_layout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START)
         NavigationUI.setupActionBarWithNavController(this, findNavController(R.id.nav_host_fragment))
 
-        ViewModelProviders.of(this)[PandoraViewModel::class.java].userDetails.observe(this, Observer {
-            userName.text = it["username"] as String
-            userEmail.text = it["email"] as String
+        ViewModelProviders.of(this)[EpimetheusViewModel::class.java].user.observe(this, Observer {
+            userName.text = it.username
+            userEmail.text = it.email
             GlideApp
                 .with(this)
-                .load(it["profilePicUri"] as Uri)
+                .load(it.profilePicUri)
                 .circleCrop()
                 .transition(DrawableTransitionOptions.withCrossFade())
                 .thumbnail(

@@ -14,7 +14,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.get
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -32,9 +31,9 @@ import kotlinx.android.synthetic.main.fragment_station_list.view.*
 import kotlinx.android.synthetic.main.station_card.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.MainActivity
-import tk.hacker1024.epimetheus.PandoraViewModel
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.User
@@ -42,7 +41,7 @@ import tk.hacker1024.libepimetheus.delete
 import tk.hacker1024.libepimetheus.rename
 
 class StationListFragment : Fragment() {
-    private lateinit var viewModel: PandoraViewModel
+    private lateinit var viewModel: EpimetheusViewModel
     private lateinit var user: User
     val artSize
         get() = PreferenceManager.getDefaultSharedPreferences(requireContext()).getString(
@@ -54,7 +53,8 @@ class StationListFragment : Fragment() {
         super.onCreate(savedInstanceState)
 
         // Get the ViewModel
-        viewModel = ViewModelProviders.of(requireActivity())[PandoraViewModel::class.java]
+        viewModel = ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java]
+        user = viewModel.user.value!!
     }
 
     override fun onCreateView(
@@ -62,13 +62,6 @@ class StationListFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        StationListFragmentArgs.fromBundle(arguments).user?.also {
-            findNavController().graph[R.id.stationListFragment].setDefaultArguments(
-                Bundle().apply { putParcelable("user", it) }
-            )
-            user = it
-        }
-
         viewModel.getStationList(user).observe(this, Observer {
             if (it != null) {
                 view?.recyclerview_station_list?.adapter?.notifyDataSetChanged()
@@ -221,7 +214,6 @@ class StationListFragment : Fragment() {
                 findNavController().navigate(
                     R.id.playlistFragment,
                     bundleOf(
-                        "user" to user,
                         "stations" to viewModel.getStationList(user).value,
                         "stationIndex" to adapterPosition,
                         "start" to true

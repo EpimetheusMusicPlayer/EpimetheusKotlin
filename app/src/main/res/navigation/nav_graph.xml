@@ -30,11 +30,6 @@
             app:exitAnim="@anim/nav_default_exit_anim"
             app:popEnterAnim="@anim/nav_default_pop_enter_anim"
             app:popExitAnim="@anim/nav_default_pop_exit_anim" />
-        <argument
-            android:name="user"
-            android:defaultValue="@null"
-            app:argType="tk.hacker1024.libepimetheus.User"
-            app:nullable="true" />
     </fragment>
     <fragment
         android:id="@+id/playlistFragment"
@@ -48,11 +43,6 @@
         <argument
             android:name="stations"
             android:defaultValue="@null" />
-        <argument
-            android:name="user"
-            android:defaultValue="@null"
-            app:argType="tk.hacker1024.libepimetheus.User"
-            app:nullable="true" />
         <argument
             android:name="start"
             android:defaultValue="false"
