@@ -9,7 +9,6 @@ import android.support.v4.media.MediaDescriptionCompat
 import android.support.v4.media.RatingCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -43,8 +42,24 @@ class PlaylistFragment : Fragment() {
     private var mediaController: MediaControllerCompat? = null
     private var cachedSize = 0
 
+    @ColorInt private var textColorActive: Int = 0xFF_FF_FF_FF.toInt()
+    @ColorInt private var textColorInactive: Int = 0x8A_00_00_00.toInt()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        requireContext().obtainStyledAttributes(
+            intArrayOf(
+                android.R.attr.textColorPrimaryInverse,
+                android.R.attr.textColorSecondary
+            )
+        ).apply {
+            @SuppressLint("ResourceType")
+            textColorActive = getColor(0, 0xFF_FF_FF_FF.toInt())
+            @SuppressLint("ResourceType")
+            textColorInactive = getColor(1, 0x8A_00_00_00.toInt())
+            recycle()
+        }
 
         if (arguments!!.getBoolean("start")) {
             findNavController().graph[R.id.playlistFragment].setDefaultArguments(
@@ -155,9 +170,8 @@ class PlaylistFragment : Fragment() {
                 view?.song_list?.adapter.also {
                     if (it != null) dispatchUpdatesTo(it)
                     oldQueue = queue
-                    song_list.findViewHolderForAdapterPosition(0)?.apply {
-                        (it as SongRecyclerAdapter).colorSong(
-                            (this as ViewHolder).songCard,
+                    (song_list.findViewHolderForAdapterPosition(0) as ViewHolder?)?.apply {
+                        colorSong(
                             true,
                             if (queueItemDescription.extras!!.containsKey("rating"))
                                 queueItemDescription.extras!!.getBoolean("rating")
@@ -169,28 +183,136 @@ class PlaylistFragment : Fragment() {
         }
     }
 
-    private class ViewHolder(internal val songCard: LinearLayout) : RecyclerView.ViewHolder(songCard) {
+    private inner class ViewHolder(internal val songCard: LinearLayout) : RecyclerView.ViewHolder(songCard) {
         lateinit var queueItemDescription: MediaDescriptionCompat
-    }
-    private inner class SongRecyclerAdapter : RecyclerView.Adapter<ViewHolder>() {
-        @ColorInt private val textColorActive: Int
-        @ColorInt private val textColorInactive: Int
 
-        init {
-            requireContext().obtainStyledAttributes(
-                intArrayOf(
-                    android.R.attr.textColorPrimaryInverse,
-                    android.R.attr.textColorSecondary
+        @Suppress("DEPRECATION")
+        internal fun colorSong(active: Boolean, rating: Boolean?) {
+            if (active) {
+                songCard.setBackgroundColor(
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        resources.getColor(R.color.colorPrimary, null)
+                    } else {
+                        resources.getColor(R.color.colorPrimary)
+                    }
                 )
-            ).apply {
-                @SuppressLint("ResourceType")
-                textColorActive = getColor(0, 0xFF_FF_FF_FF.toInt())
-                @SuppressLint("ResourceType")
-                textColorInactive = getColor(1, 0x8A_00_00_00.toInt())
-                recycle()
+                songCard.song_title.setTextColor(textColorActive)
+                songCard.song_artist.setTextColor(textColorActive)
+                songCard.song_album.setTextColor(textColorActive)
+                songCard.ban_progress.indeterminateDrawable.setTint(textColorActive)
+                songCard.love_progress.indeterminateDrawable.setTint(textColorActive)
+                songCard.ban_thumb.setColorFilter(
+                    if (rating == false) 0xFF_FF_FF_00.toInt() else textColorActive
+                )
+                songCard.love_thumb.setColorFilter(
+                    if (rating == true) 0xFF_FF_FF_00.toInt() else textColorActive
+                )
+            } else {
+                songCard.setBackgroundColor(Color.TRANSPARENT)
+                songCard.song_title.setTextColor(textColorInactive)
+                songCard.song_artist.setTextColor(textColorInactive)
+                songCard.song_album.setTextColor(textColorInactive)
+                songCard.ban_progress.indeterminateDrawable.setTint(textColorInactive)
+                songCard.love_progress.indeterminateDrawable.setTint(textColorInactive)
+                songCard.ban_thumb.setColorFilter(
+                    if (rating == false) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                            resources.getColor(R.color.colorPrimary, null)
+                        else resources.getColor(R.color.colorPrimary)
+                    }
+                    else textColorInactive
+                )
+                songCard.love_thumb.setColorFilter(
+                    if (rating == true) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                            resources.getColor(R.color.colorPrimary, null)
+                        else resources.getColor(R.color.colorPrimary)
+                    }
+                    else textColorInactive
+                )
             }
         }
 
+        init {
+            // Show menu on click.
+            songCard.setOnClickListener {
+                PopupMenu(requireContext(), it).apply {
+                    setOnMenuItemClickListener { menuItem ->
+                        when (menuItem.itemId) {
+                            R.id.play -> {
+                                if (adapterPosition != 0) {
+                                    colorSong(
+                                        true,
+                                        if (queueItemDescription.extras!!.containsKey("rating"))
+                                            queueItemDescription.extras!!.getBoolean("rating")
+                                        else null
+                                    )
+                                    mediaController!!.transportControls.skipToQueueItem(adapterPosition.toLong())
+                                }
+                                true
+                            }
+
+                            R.id.tired -> {
+                                mediaController!!.transportControls.sendCustomAction(
+                                    MusicService.addTiredAction,
+                                    bundleOf(
+                                        "songIndex" to adapterPosition
+                                    )
+                                )
+                                true
+                            }
+
+                            else -> false
+                        }
+                    }
+                    inflate(R.menu.song_menu)
+                    if (adapterPosition == 0) menu.removeItem(R.id.play)
+                    if (menu.isNotEmpty()) show()
+                }
+            }
+
+            songCard.ban_thumb.setOnClickListener {
+                it.visibility = View.GONE
+                songCard.ban_progress.visibility = View.VISIBLE
+                if (queueItemDescription.extras!!.containsKey("rating") && !queueItemDescription.extras!!.getBoolean("rating")) {
+                    mediaController!!.transportControls!!.setRating(
+                        RatingCompat.newUnratedRating(RatingCompat.RATING_THUMB_UP_DOWN),
+                        bundleOf(
+                            "songIndex" to adapterPosition
+                        )
+                    )
+                } else {
+                    mediaController!!.transportControls!!.setRating(
+                        RatingCompat.newThumbRating(false),
+                        bundleOf(
+                            "songIndex" to adapterPosition
+                        )
+                    )
+                }
+            }
+
+            songCard.love_thumb.setOnClickListener {
+                it.visibility = View.GONE
+                songCard.love_progress.visibility = View.VISIBLE
+                if (queueItemDescription.extras!!.containsKey("rating") && queueItemDescription.extras!!.getBoolean("rating")) {
+                    mediaController!!.transportControls!!.setRating(
+                        RatingCompat.newUnratedRating(RatingCompat.RATING_THUMB_UP_DOWN),
+                        bundleOf(
+                            "songIndex" to adapterPosition
+                        )
+                    )
+                } else {
+                    mediaController!!.transportControls!!.setRating(
+                        RatingCompat.newThumbRating(true),
+                        bundleOf(
+                            "songIndex" to adapterPosition
+                        )
+                    )
+                }
+            }
+        }
+    }
+    private inner class SongRecyclerAdapter : RecyclerView.Adapter<ViewHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
             ViewHolder(
                 LayoutInflater.from(parent.context)
@@ -202,129 +324,47 @@ class PlaylistFragment : Fragment() {
             )
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            try {
-                holder.queueItemDescription = mediaController!!.queue[position].description
+            holder.queueItemDescription = mediaController!!.queue[position].description
 
-                // Set the colors
-                colorSong(
-                    holder.songCard,
-                    holder.adapterPosition == 0,
-                    if (holder.queueItemDescription.extras!!.containsKey("rating"))
-                        holder.queueItemDescription.extras!!.getBoolean("rating")
-                    else null
-                )
+            // Set the colors
+            holder.colorSong(
+                holder.adapterPosition == 0,
+                if (holder.queueItemDescription.extras!!.containsKey("rating"))
+                    holder.queueItemDescription.extras!!.getBoolean("rating")
+                else null
+            )
 
-                // Bind the song title, artist, and album
-                holder.songCard.song_title.text = holder.queueItemDescription.title
-                holder.songCard.song_artist.text = holder.queueItemDescription.subtitle
-                holder.songCard.song_album.text = holder.queueItemDescription.description
+            // Bind the song title, artist, and album
+            holder.songCard.song_title.text = holder.queueItemDescription.title
+            holder.songCard.song_artist.text = holder.queueItemDescription.subtitle
+            holder.songCard.song_album.text = holder.queueItemDescription.description
 
-                GlideApp
-                    .with(this@PlaylistFragment)
-                    .asBitmap()
-                    .load(holder.queueItemDescription.iconBitmap)
-                    .diskCacheStrategy(DiskCacheStrategy.NONE)
-                    .transform(RoundedCorners(ALBUM_ART_CORNER_RADIUS))
-                    .into(holder.songCard.song_album_art)
+            GlideApp
+                .with(this@PlaylistFragment)
+                .asBitmap()
+                .load(holder.queueItemDescription.iconBitmap)
+                .diskCacheStrategy(DiskCacheStrategy.NONE)
+                .transform(RoundedCorners(ALBUM_ART_CORNER_RADIUS))
+                .into(holder.songCard.song_album_art)
 
-                // Show menu on click.
-                holder.songCard.setOnClickListener {
-                    PopupMenu(requireContext(), it).apply {
-                        setOnMenuItemClickListener { menuItem ->
-                            when (menuItem.itemId) {
-                                R.id.play -> {
-                                    if (holder.adapterPosition != 0) {
-                                        colorSong(
-                                            holder.songCard,
-                                            true,
-                                            if (holder.queueItemDescription.extras!!.containsKey("rating"))
-                                                holder.queueItemDescription.extras!!.getBoolean("rating")
-                                            else null
-                                        )
-                                        mediaController!!.transportControls.skipToQueueItem(holder.adapterPosition.toLong())
-                                    }
-                                    true
-                                }
-
-                                R.id.tired -> {
-                                    mediaController!!.transportControls.sendCustomAction(
-                                        MusicService.addTiredAction,
-                                        bundleOf(
-                                            "songIndex" to holder.adapterPosition
-                                        )
-                                    )
-                                    true
-                                }
-
-                                else -> false
-                            }
-                        }
-                        inflate(R.menu.song_menu)
-                        if (holder.adapterPosition == 0) menu.removeItem(R.id.play)
-                        if (menu.isNotEmpty()) show()
-                    }
-                }
-
-                // Bind the rating progress
-                if (holder.queueItemDescription.extras!!.containsKey("settingFeedback")) {
-                    (holder.queueItemDescription.extras!!.getBoolean("settingFeedback")).apply {
-                        if (this) {
-                            holder.songCard.love_thumb.visibility = View.GONE
-                            holder.songCard.love_progress.visibility = View.VISIBLE
-                        } else {
-                            holder.songCard.ban_thumb.visibility = View.GONE
-                            holder.songCard.ban_progress.visibility = View.VISIBLE
-                        }
-                    }
-                } else {
-                    holder.songCard.ban_progress.visibility = View.GONE
-                    holder.songCard.love_progress.visibility = View.GONE
-                    holder.songCard.ban_thumb.visibility = View.VISIBLE
-                    holder.songCard.love_thumb.visibility = View.VISIBLE
-                }
-
-                holder.songCard.ban_thumb.setOnClickListener {
-                    it.visibility = View.GONE
-                    holder.songCard.ban_progress.visibility = View.VISIBLE
-                    if (holder.queueItemDescription.extras!!.containsKey("rating") && !holder.queueItemDescription.extras!!.getBoolean("rating")) {
-                        mediaController!!.transportControls!!.setRating(
-                            RatingCompat.newUnratedRating(RatingCompat.RATING_THUMB_UP_DOWN),
-                            bundleOf(
-                                "songIndex" to holder.adapterPosition
-                            )
-                        )
+            // Bind the rating progress
+            if (holder.queueItemDescription.extras!!.containsKey("settingFeedback")) {
+                (holder.queueItemDescription.extras!!.getBoolean("settingFeedback")).apply {
+                    if (this) {
+                        holder.songCard.love_thumb.visibility = View.GONE
+                        holder.songCard.love_progress.visibility = View.VISIBLE
                     } else {
-                        mediaController!!.transportControls!!.setRating(
-                            RatingCompat.newThumbRating(false),
-                            bundleOf(
-                                "songIndex" to holder.adapterPosition
-                            )
-                        )
+                        holder.songCard.ban_thumb.visibility = View.GONE
+                        holder.songCard.ban_progress.visibility = View.VISIBLE
                     }
                 }
-
-                holder.songCard.love_thumb.setOnClickListener {
-                    it.visibility = View.GONE
-                    holder.songCard.love_progress.visibility = View.VISIBLE
-                    if (holder.queueItemDescription.extras!!.containsKey("rating") && holder.queueItemDescription.extras!!.getBoolean("rating")) {
-                        mediaController!!.transportControls!!.setRating(
-                            RatingCompat.newUnratedRating(RatingCompat.RATING_THUMB_UP_DOWN),
-                            bundleOf(
-                                "songIndex" to holder.adapterPosition
-                            )
-                        )
-                    } else {
-                        mediaController!!.transportControls!!.setRating(
-                            RatingCompat.newThumbRating(true),
-                            bundleOf(
-                                "songIndex" to holder.adapterPosition
-                            )
-                        )
-                    }
-                }
-            } catch (e: IndexOutOfBoundsException) {
-                Log.wtf("INDEXOOB", "IndexOutOfBoundsException", e)
+            } else {
+                holder.songCard.ban_progress.visibility = View.GONE
+                holder.songCard.love_progress.visibility = View.GONE
+                holder.songCard.ban_thumb.visibility = View.VISIBLE
+                holder.songCard.love_thumb.visibility = View.VISIBLE
             }
+
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: List<Any>) {
@@ -359,8 +399,7 @@ class PlaylistFragment : Fragment() {
                             holder.songCard.ban_thumb.visibility = View.VISIBLE
                             holder.songCard.love_thumb.visibility = View.VISIBLE
                         }
-                        colorSong(
-                            holder.songCard,
+                        holder.colorSong(
                             holder.adapterPosition == 0,
                             if (holder.queueItemDescription.extras!!.containsKey("rating"))
                                 holder.queueItemDescription.extras!!.getBoolean("rating")
@@ -374,52 +413,5 @@ class PlaylistFragment : Fragment() {
         }
 
         override fun getItemCount() = cachedSize
-
-        @Suppress("DEPRECATION")
-        internal fun colorSong(card: LinearLayout, active: Boolean, rating: Boolean?) {
-            if (active) {
-                card.setBackgroundColor(
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        resources.getColor(R.color.colorPrimary, null)
-                    } else {
-                        resources.getColor(R.color.colorPrimary)
-                    }
-                )
-                card.song_title.setTextColor(textColorActive)
-                card.song_artist.setTextColor(textColorActive)
-                card.song_album.setTextColor(textColorActive)
-                card.ban_progress.indeterminateDrawable.setTint(textColorActive)
-                card.love_progress.indeterminateDrawable.setTint(textColorActive)
-                card.ban_thumb.setColorFilter(
-                    if (rating == false) 0xFF_FF_FF_00.toInt() else textColorActive
-                )
-                card.love_thumb.setColorFilter(
-                    if (rating == true) 0xFF_FF_FF_00.toInt() else textColorActive
-                )
-            } else {
-                card.setBackgroundColor(Color.TRANSPARENT)
-                card.song_title.setTextColor(textColorInactive)
-                card.song_artist.setTextColor(textColorInactive)
-                card.song_album.setTextColor(textColorInactive)
-                card.ban_progress.indeterminateDrawable.setTint(textColorInactive)
-                card.love_progress.indeterminateDrawable.setTint(textColorInactive)
-                card.ban_thumb.setColorFilter(
-                    if (rating == false) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                            resources.getColor(R.color.colorPrimary, null)
-                        else resources.getColor(R.color.colorPrimary)
-                    }
-                    else textColorInactive
-                )
-                card.love_thumb.setColorFilter(
-                    if (rating == true) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                            resources.getColor(R.color.colorPrimary, null)
-                        else resources.getColor(R.color.colorPrimary)
-                    }
-                    else textColorInactive
-                )
-            }
-        }
     }
 }
