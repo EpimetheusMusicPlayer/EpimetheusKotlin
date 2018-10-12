@@ -9,9 +9,7 @@ import android.support.v4.media.MediaDescriptionCompat
 import android.support.v4.media.RatingCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.LinearLayout
 import androidx.annotation.ColorInt
 import androidx.appcompat.widget.PopupMenu
@@ -183,7 +181,9 @@ class PlaylistFragment : Fragment() {
         }
     }
 
-    private inner class ViewHolder(internal val songCard: LinearLayout) : RecyclerView.ViewHolder(songCard) {
+    var menu: Menu? = null
+    @SuppressLint("ClickableViewAccessibility")
+    private inner class ViewHolder(internal val songCard: LinearLayout) : RecyclerView.ViewHolder(songCard), View.OnCreateContextMenuListener {
         lateinit var queueItemDescription: MediaDescriptionCompat
 
         @Suppress("DEPRECATION")
@@ -234,40 +234,34 @@ class PlaylistFragment : Fragment() {
         }
 
         init {
+            songCard.setOnCreateContextMenuListener(this)
+
             // Show menu on click.
-            songCard.setOnClickListener {
-                PopupMenu(requireContext(), it).apply {
-                    setOnMenuItemClickListener { menuItem ->
-                        when (menuItem.itemId) {
-                            R.id.play -> {
-                                if (adapterPosition != 0) {
-                                    colorSong(
-                                        true,
-                                        if (queueItemDescription.extras!!.containsKey("rating"))
-                                            queueItemDescription.extras!!.getBoolean("rating")
-                                        else null
-                                    )
-                                    mediaController!!.transportControls.skipToQueueItem(adapterPosition.toLong())
-                                }
-                                true
-                            }
+            var x = 0f
+            var y = 0f
+            songCard.setOnTouchListener { _, event ->
+                if (event.action == MotionEvent.ACTION_DOWN) {
+                    x = event.x
+                    y = event.y
+                }
+                false
+            }
 
-                            R.id.tired -> {
-                                mediaController!!.transportControls.sendCustomAction(
-                                    MusicService.addTiredAction,
-                                    bundleOf(
-                                        "songIndex" to adapterPosition
-                                    )
-                                )
-                                true
-                            }
-
-                            else -> false
-                        }
-                    }
-                    inflate(R.menu.song_menu)
-                    if (adapterPosition == 0) menu.removeItem(R.id.play)
-                    if (menu.isNotEmpty()) show()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                songCard.setOnClickListener {
+                    songCard.showContextMenu(x, y)
+                }
+                songCard.setOnLongClickListener {
+                    songCard.showContextMenu(x, y)
+                    true
+                }
+            } else {
+                songCard.setOnClickListener {
+                    showPopupMenu()
+                }
+                songCard.setOnLongClickListener {
+                    showPopupMenu()
+                    true
                 }
             }
 
@@ -310,6 +304,75 @@ class PlaylistFragment : Fragment() {
                     )
                 }
             }
+        }
+
+        override fun onCreateContextMenu(menu: ContextMenu, v: View, menuInfo: ContextMenu.ContextMenuInfo?) {
+            requireActivity().menuInflater.inflate(R.menu.song_menu, menu)
+            menu.setHeaderTitle(songCard.song_title.text)
+            if (adapterPosition == 0) {
+                menu.removeItem(R.id.play)
+            } else {
+                menu.findItem(R.id.play).setOnMenuItemClickListener {
+                    menuPlay()
+                    this@PlaylistFragment.menu = null
+                    true
+                }
+            }
+            menu.findItem(R.id.tired).setOnMenuItemClickListener {
+                menuTired()
+                this@PlaylistFragment.menu = null
+                true
+            }
+            this@PlaylistFragment.menu = menu
+        }
+
+        fun showPopupMenu() {
+            PopupMenu(requireContext(), songCard).apply {
+                setOnMenuItemClickListener { menuItem ->
+                    when (menuItem.itemId) {
+                        R.id.play -> {
+                            menuPlay()
+                            this@PlaylistFragment.menu = null
+                            true
+                        }
+
+                        R.id.tired -> {
+                            menuTired()
+                            this@PlaylistFragment.menu = null
+                            true
+                        }
+
+                        else -> false
+                    }
+                }
+                inflate(R.menu.song_menu)
+                if (adapterPosition == 0) menu.removeItem(R.id.play)
+                if (menu.isNotEmpty()) {
+                    this@PlaylistFragment.menu = menu
+                    show()
+                }
+            }
+        }
+
+        private fun menuPlay() {
+            if (adapterPosition != 0) {
+                colorSong(
+                    true,
+                    if (queueItemDescription.extras!!.containsKey("rating"))
+                        queueItemDescription.extras!!.getBoolean("rating")
+                    else null
+                )
+                mediaController!!.transportControls.skipToQueueItem(adapterPosition.toLong())
+            }
+        }
+
+        private fun menuTired() {
+            mediaController!!.transportControls.sendCustomAction(
+                MusicService.addTiredAction,
+                bundleOf(
+                    "songIndex" to adapterPosition
+                )
+            )
         }
     }
     private inner class SongRecyclerAdapter : RecyclerView.Adapter<ViewHolder>() {
@@ -410,6 +473,14 @@ class PlaylistFragment : Fragment() {
             } else {
                 return super.onBindViewHolder(holder, position, payloads)
             }
+        }
+
+        override fun onViewDetachedFromWindow(holder: ViewHolder) {
+            menu?.close()
+        }
+
+        override fun onViewRecycled(holder: ViewHolder) {
+            menu?.close()
         }
 
         override fun getItemCount() = cachedSize
