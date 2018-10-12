@@ -106,6 +106,10 @@ class MediaControlFragment : Fragment() {
         view!!.visibility = View.VISIBLE
     }
 
+    internal fun hide() {
+        view!!.visibility = View.GONE
+    }
+
     internal fun showIfServiceRunning() {
         if (isServiceRunning(requireContext())) show()
     }
