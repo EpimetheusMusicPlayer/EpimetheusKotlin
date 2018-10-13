@@ -2,13 +2,19 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <group android:id="@+id/menu_start">
         <item
-            android:id="@+id/stationListFragment"
-            android:icon="@drawable/ic_stations_black_24dp"
-            android:title="@string/fragment_label_station_list" />
-        <item
             android:id="@+id/playlistFragment"
             android:icon="@drawable/ic_queue_24dp"
             android:title="@string/fragment_label_playlist" />
+        <item
+            android:id="@+id/stationListFragment"
+            android:icon="@drawable/ic_stations_black_24dp"
+            android:title="@string/fragment_label_station_list" />
+    </group>
+    <group android:id="@+id/discover_group">
+        <item
+            android:id="@+id/browseFragment"
+            android:icon="@drawable/ic_library_add_black_24dp"
+            android:title="@string/fragment_label_browse" />
     </group>
     <group android:id="@+id/settings">
         <item

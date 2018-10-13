@@ -82,6 +82,6 @@
     <fragment
         android:id="@+id/browseFragment"
         android:name="tk.hacker1024.epimetheus.fragments.BrowseFragment"
-        android:label="fragment_browse"
+        android:label="@string/fragment_label_browse"
         tools:layout="@layout/fragment_browse" />
 </navigation>

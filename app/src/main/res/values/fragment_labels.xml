@@ -4,5 +4,6 @@
     <string name="fragment_label_playlist">Now Playing</string>
     <string name="fragment_label_login">Sign in</string>
     <string name="fragment_label_register">Sign up</string>
+    <string name="fragment_label_browse">Discover</string>
     <string name="fragment_label_settings">Settings</string>
 </resources>
