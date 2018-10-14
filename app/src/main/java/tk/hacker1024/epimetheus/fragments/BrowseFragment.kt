@@ -6,9 +6,12 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import androidx.cardview.widget.CardView
 import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.FragmentPagerAdapter
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
@@ -28,27 +31,74 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.util.FixedPreloadSizeProvider
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.browse_card.view.*
-import kotlinx.android.synthetic.main.fragment_browse.*
+import kotlinx.android.synthetic.main.browse_tab_categories.*
+import kotlinx.android.synthetic.main.browse_tab_categories.view.*
+import kotlinx.android.synthetic.main.browse_tab_recommended.*
+import kotlinx.android.synthetic.main.browse_tab_recommended.view.*
+import kotlinx.android.synthetic.main.category_card.view.*
 import kotlinx.android.synthetic.main.fragment_browse.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.R
+import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.Browse
 import tk.hacker1024.libepimetheus.StationRecommendations
 import tk.hacker1024.libepimetheus.User
+import tk.hacker1024.libepimetheus.data.search.GenreCategory
 import tk.hacker1024.libepimetheus.data.search.Listenable
 import kotlin.math.round
 
-class BrowseViewModel : ViewModel() {
+class BrowseFragment : Fragment() {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return inflater.inflate(R.layout.fragment_browse, container, false)!!.apply {
+            pager.adapter = PagerAdapter(childFragmentManager)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        requireActivity().toolbar_layout.elevation = 0f
+    }
+
+    override fun onStop() {
+        super.onStop()
+        requireActivity().toolbar_layout.elevation = 10.8f
+    }
+}
+
+private class PagerAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm) {
+    override fun getCount() = 2
+
+    override fun getItem(position: Int) =
+        when (position) {
+            0 -> RecommendedFragment()
+            1 -> CategoryFragment()
+            else -> null
+        }
+
+    override fun getPageTitle(position: Int) =
+        when (position) {
+            0 -> "Suggested"
+            1 -> "Genres"
+            else -> null
+        }
+}
+
+class RecommendedViewModel : ViewModel() {
     val recommendations = MutableLiveData<StationRecommendations>()
 }
 
-class BrowseFragment : Fragment() {
+class RecommendedFragment : Fragment() {
     private lateinit var user: User
-    private lateinit var viewModel: BrowseViewModel
+    private lateinit var viewModel: RecommendedViewModel
 
     private val artSize by lazy {
         PreferenceManager.getDefaultSharedPreferences(requireContext()).getString(
@@ -60,8 +110,9 @@ class BrowseFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        user = ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].user.value!!
-        viewModel = ViewModelProviders.of(this)[BrowseViewModel::class.java]
+        user =
+                ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].user.value!!
+        viewModel = ViewModelProviders.of(this)[RecommendedViewModel::class.java]
 
         if (viewModel.recommendations.value == null) {
             GlobalScope.launch {
@@ -75,7 +126,7 @@ class BrowseFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ) =
-        inflater.inflate(R.layout.fragment_browse, container, false)!!
+        inflater.inflate(R.layout.browse_tab_recommended, container, false)!!
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         viewModel.recommendations.observe(this, Observer {
@@ -108,18 +159,21 @@ class BrowseFragment : Fragment() {
                     }
                 } else genre_list.adapter!!.notifyDataSetChanged()
 
-                view.progress_indicator.visibility = View.GONE
+                view.recommended_progress_indicator.visibility = View.GONE
                 view.browseFragment.visibility = View.VISIBLE
             }
         })
 
-        artist_list.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-        genre_list.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        artist_list.layoutManager =
+                LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        genre_list.layoutManager =
+                LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
     }
 
     private class ViewHolder(val card: CardView) : RecyclerView.ViewHolder(card)
 
-    private inner class Adapter(val dataSource: List<Listenable>?) : RecyclerView.Adapter<ViewHolder>(), ListPreloader.PreloadModelProvider<String> {
+    private inner class Adapter(val dataSource: List<Listenable>?) :
+        RecyclerView.Adapter<ViewHolder>(), ListPreloader.PreloadModelProvider<String> {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
             ViewHolder(
                 LayoutInflater.from(parent.context).inflate(
@@ -134,7 +188,7 @@ class BrowseFragment : Fragment() {
                 .transition(DrawableTransitionOptions.withCrossFade())
                 .thumbnail(
                     GlideApp
-                        .with(this@BrowseFragment)
+                        .with(this@RecommendedFragment)
                         .load("https://www.pandora.com/web-version/1.34.2/images/artist_500.png")
                         .override(artSize)
                         .transform(RoundedCorners(8))
@@ -165,7 +219,7 @@ class BrowseFragment : Fragment() {
 
         override fun getPreloadRequestBuilder(item: String): RequestBuilder<Drawable> {
             return GlideApp
-                .with(this@BrowseFragment)
+                .with(this@RecommendedFragment)
                 .load(item)
                 .override(artSize)
                 .centerCrop()
@@ -195,5 +249,95 @@ class BrowseFragment : Fragment() {
             target: Target<Drawable>,
             isFirstResource: Boolean
         ) = false
+    }
+}
+
+class CategoriesViewModel : ViewModel() {
+    val categories = MutableLiveData<List<GenreCategory>>()
+}
+
+class CategoryFragment : Fragment() {
+    private lateinit var user: User
+    private lateinit var viewModel: CategoriesViewModel
+
+    private val artSize by lazy {
+        PreferenceManager.getDefaultSharedPreferences(requireContext()).getString(
+            "art_size",
+            "500"
+        )!!.toInt()
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        user =
+                ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].user.value!!
+        viewModel = ViewModelProviders.of(this)[CategoriesViewModel::class.java]
+
+        if (viewModel.categories.value == null) {
+            GlobalScope.launch {
+                viewModel.categories.postValue(Browse.getGenreCategories(user))
+            }
+        }
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return inflater.inflate(R.layout.browse_tab_categories, container, false)!!
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        viewModel.categories.observe(this, Observer {
+            category_list.adapter!!.notifyDataSetChanged()
+            view.categories_progress_indicator.visibility = View.GONE
+            category_list.visibility = View.VISIBLE
+        })
+
+        category_list.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = Adapter()
+        }
+    }
+
+    private class ViewHolder(val item: LinearLayout) : RecyclerView.ViewHolder(item)
+    private inner class Adapter : RecyclerView.Adapter<ViewHolder>(),
+        ListPreloader.PreloadModelProvider<String> {
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+            ViewHolder(
+                LayoutInflater.from(parent.context)
+                    .inflate(R.layout.category_card, parent, false)!! as LinearLayout
+            )
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            getPreloadRequestBuilder(viewModel.categories.value!![position].getArtUrl(artSize))
+                .transition(DrawableTransitionOptions.withCrossFade())
+                .thumbnail(
+                    GlideApp
+                        .with(this@CategoryFragment)
+                        .load(GENERIC_ART_URL)
+                        .transform(RoundedCorners(8))
+                )
+                .into(holder.item.category_art)
+
+            holder.item.category_name.text = viewModel.categories.value!![position].name
+        }
+
+        override fun getItemCount() = viewModel.categories.value?.size ?: 0
+
+        override fun getPreloadItems(position: Int) =
+            mutableListOf(
+                viewModel.categories.value?.get(position)?.getArtUrl(artSize)
+            )
+
+        override fun getPreloadRequestBuilder(item: String): RequestBuilder<Drawable> {
+            return GlideApp
+                .with(this@CategoryFragment)
+                .load(item)
+                .centerCrop()
+                .transform(RoundedCorners(8))
+        }
     }
 }

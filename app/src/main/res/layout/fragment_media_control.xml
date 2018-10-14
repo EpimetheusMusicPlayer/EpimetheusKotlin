@@ -5,9 +5,10 @@
     android:id="@+id/fragment_media_control_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/colorPrimaryDark"
     android:visibility="gone"
-    tools:visibility="visible"
-    tools:context=".fragments.MediaControlFragment">
+    tools:context=".fragments.MediaControlFragment"
+    tools:visibility="visible">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -25,44 +26,54 @@
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackground"
             android:contentDescription="@string/stop"
             android:padding="4dp"
-            android:src="@drawable/ic_stop_black_24dp" />
+            android:src="@drawable/ic_stop_black_24dp"
+            android:tint="?android:attr/textColorPrimaryInverse" />
 
         <ImageView
             android:id="@+id/rewind"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackground"
             android:contentDescription="@string/rewind"
             android:padding="4dp"
-            android:src="@drawable/ic_fast_rewind_black_24dp" />
+            android:src="@drawable/ic_fast_rewind_black_24dp"
+            android:tint="?android:attr/textColorPrimaryInverse" />
 
         <ImageView
             android:id="@+id/play_pause"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackground"
             android:contentDescription="@string/play"
             android:padding="4dp"
-            android:src="@drawable/ic_pause_black_24dp" />
+            android:src="@drawable/ic_pause_black_24dp"
+            android:tint="?android:attr/textColorPrimaryInverse" />
 
         <ImageView
             android:id="@+id/fast_forward"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackground"
             android:contentDescription="@string/fast_forward"
             android:padding="4dp"
-            android:src="@drawable/ic_fast_forward_black_24dp" />
+            android:src="@drawable/ic_fast_forward_black_24dp"
+            android:tint="?android:attr/textColorPrimaryInverse" />
 
         <ImageView
             android:id="@+id/skip"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackground"
             android:contentDescription="@string/skip"
             android:padding="4dp"
-            android:src="@drawable/ic_skip_next_black_24dp" />
+            android:src="@drawable/ic_skip_next_black_24dp"
+            android:tint="?android:attr/textColorPrimaryInverse" />
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

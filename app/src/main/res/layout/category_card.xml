@@ -12,7 +12,7 @@
     android:paddingBottom="4dp">
 
     <ImageView
-        android:id="@+id/station_logo"
+        android:id="@+id/category_art"
         android:layout_width="56dp"
         android:layout_height="56dp"
         android:adjustViewBounds="true"
@@ -20,8 +20,8 @@
         android:scaleType="fitCenter" />
 
     <TextView
-        android:id="@+id/station_name"
-        android:layout_width="match_parent"
+        android:id="@+id/category_name"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
         android:layout_weight="1"
@@ -29,6 +29,6 @@
         android:paddingEnd="4dp"
         android:scrollHorizontally="false"
         android:textAppearance="@android:style/TextAppearance.DeviceDefault.Large"
-        tools:text="Station" />
+        tools:text="Category" />
 
 </LinearLayout>
