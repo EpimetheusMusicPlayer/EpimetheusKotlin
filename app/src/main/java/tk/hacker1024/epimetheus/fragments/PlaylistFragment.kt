@@ -184,8 +184,8 @@ class PlaylistFragment : Fragment() {
             }
         }
 
-        internal val handler = Handler()
-        internal val updateProgress = object : Runnable {
+        val handler = Handler()
+        val updateProgress = object : Runnable {
             @SuppressLint("SetTextI18n")
             override fun run() {
                 if (mediaController != null) {
@@ -418,6 +418,7 @@ class PlaylistFragment : Fragment() {
             holder.songCard.song_title.text = holder.queueItemDescription.title
             holder.songCard.song_artist.text = holder.queueItemDescription.subtitle
             holder.songCard.song_album.text = holder.queueItemDescription.description
+            holder.songCard.progress.text = "-- / --"
 
             GlideApp
                 .with(this@PlaylistFragment)

@@ -407,7 +407,6 @@ internal class MusicService : MediaBrowserServiceCompat() {
 
                     mediaSession.setMetadata(
                         MediaMetadataCompat.Builder()
-                            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, mediaPlayer.duration)
                             .putString(
                                 MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE,
                                 playlist[0].song.name
@@ -421,8 +420,6 @@ internal class MusicService : MediaBrowserServiceCompat() {
                             .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, playlist[0].artUri.toString())
                             .build()
                     )
-
-                    println(mediaPlayer.duration)
 
                     playlist.loadBitmapIfNeeded(0) {
                         mediaNotificationBuilder.setLargeIcon(it)
@@ -622,6 +619,11 @@ internal class MusicService : MediaBrowserServiceCompat() {
         override fun onPositionDiscontinuity(reason: Int) {
             if (reason == Player.DISCONTINUITY_REASON_PERIOD_TRANSITION) {
                 newSong(true)
+                mediaSession.setMetadata(
+                    MediaMetadataCompat.Builder(mediaSession.controller.metadata)
+                        .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, mediaPlayer.duration)
+                        .build()
+                )
             }
         }
 
