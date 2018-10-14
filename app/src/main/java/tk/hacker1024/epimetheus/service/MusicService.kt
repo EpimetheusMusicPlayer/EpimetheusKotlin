@@ -594,10 +594,9 @@ internal class MusicService : MediaBrowserServiceCompat() {
                             )
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
                         when (e) {
                             is IOException -> stop(MusicServiceResults.ERROR_NETWORK)
-                            is PandoraException -> stop(MusicServiceResults.ERROR_PANDORA)
+                            is PandoraException -> stop(MusicServiceResults.ERROR_PANDORA.apply { message = e.message })
                             else -> {
                                 Log.e(LOG_TAG, e.message, e)
                                 stop(MusicServiceResults.ERROR_INTERNAL)
@@ -788,7 +787,11 @@ internal class MusicService : MediaBrowserServiceCompat() {
             } catch (e: IOException) {
                 stop(MusicServiceResults.ERROR_NETWORK)
             } catch (e: PandoraException) {
-                stop(MusicServiceResults.ERROR_NETWORK)
+                if (e is InvalidRequestException) {
+                    loadSongs()
+                } else {
+                    stop(MusicServiceResults.ERROR_PANDORA.apply { message = e.message })
+                }
             }
         }
 
@@ -825,7 +828,7 @@ internal class MusicService : MediaBrowserServiceCompat() {
                                             } catch (e: ExecutionException) {
                                                 loaded = false
                                             } catch (e: IOException) {
-                                                stop(MusicServiceResults.ERROR_NETWORK)
+                                                loaded = false
                                             }
                                             callback?.invoke(artBitmap)
                                         }
