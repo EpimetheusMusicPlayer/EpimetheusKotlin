@@ -2,4 +2,16 @@
     <string name="app_name">Epimetheus</string>
     <string name="signout">Sign out</string>
     <string name="profile_picture">Profile picture</string>
+
+    <plurals name="listenersMillions">
+        <item quantity="zero">&lt;1M listeners</item>
+        <item quantity="one">%dM listeners</item>
+        <item quantity="other">%dM listeners</item>
+    </plurals>
+
+    <plurals name="listenersThousands">
+        <item quantity="zero">&lt;1K listeners</item>
+        <item quantity="one">%dK listeners</item>
+        <item quantity="other">%dK listeners</item>
+    </plurals>
 </resources>

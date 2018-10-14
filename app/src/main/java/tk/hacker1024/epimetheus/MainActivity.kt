@@ -21,7 +21,7 @@ import androidx.navigation.ui.setupWithNavController
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.activity_main.view.*
-import kotlinx.android.synthetic.main.nav_header.*
+import kotlinx.android.synthetic.main.nav_header.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.dialogs.showNetworkErrorDialog
@@ -78,20 +78,22 @@ class MainActivity : AppCompatActivity() {
         NavigationUI.setupActionBarWithNavController(this, findNavController(R.id.nav_host_fragment))
 
         ViewModelProviders.of(this)[EpimetheusViewModel::class.java].user.observe(this, Observer {
-            userName.text = it.username
-            userEmail.text = it.email
-            GlideApp
-                .with(this)
-                .load(it.profilePicUri)
-                .circleCrop()
-                .transition(DrawableTransitionOptions.withCrossFade())
-                .thumbnail(
-                    GlideApp
-                        .with(this)
-                        .load(GENERIC_ART_URL)
-                        .circleCrop()
-                )
-                .into(userPicture)
+            navigation_view.getHeaderView(0).also { view ->
+                view.userName.text = it.username
+                view.userEmail.text = it.email
+                GlideApp
+                    .with(this)
+                    .load(it.profilePicUri)
+                    .circleCrop()
+                    .transition(DrawableTransitionOptions.withCrossFade())
+                    .thumbnail(
+                        GlideApp
+                            .with(this)
+                            .load(GENERIC_ART_URL)
+                            .circleCrop()
+                    )
+                    .into(view.userPicture)
+            }
         })
 
         drawer_layout.navigation_view.getHeaderView(0).setOnClickListener {
