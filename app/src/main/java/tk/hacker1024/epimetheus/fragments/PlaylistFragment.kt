@@ -5,7 +5,9 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.support.v4.media.MediaDescriptionCompat
+import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.RatingCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
@@ -113,12 +115,14 @@ class PlaylistFragment : Fragment() {
             mediaController = MediaControllerCompat.getMediaController(requireActivity())
             mediaController!!.registerCallback(controllerCallback)
             mediaController!!.queue?.apply { controllerCallback.onQueueChanged(this) }
+            controllerCallback.handler.post(controllerCallback.updateProgress)
         }
     }
 
     override fun onStop() {
         super.onStop()
         mediaController?.unregisterCallback(controllerCallback)
+        mediaController = null
     }
 
     private val controllerCallback = object : MediaControllerCompat.Callback() {
@@ -179,6 +183,30 @@ class PlaylistFragment : Fragment() {
                 }
             }
         }
+
+        internal val handler = Handler()
+        internal val updateProgress = object : Runnable {
+            @SuppressLint("SetTextI18n")
+            override fun run() {
+                if (mediaController != null) {
+                    val duration =
+                        mediaController?.metadata?.getLong(MediaMetadataCompat.METADATA_KEY_DURATION) ?: 0
+
+                    val positionString = if (duration <= 0L) "--" else (mediaController?.playbackState?.position ?: 0L).run {
+                        (if (this < 0L) 0 else this / 1000).run {
+                            "${this / 60}:${String.format("%02d", this % 60)}"
+                        }
+                    }
+                    val durationString = if (duration <= 0L) "--" else (duration / 1000).run {
+                        "${this / 60}:${String.format("%02d", this % 60)}"
+                    }
+
+                    (view?.song_list?.findViewHolderForAdapterPosition(0) as? ViewHolder)
+                        ?.songCard?.progress?.text = "$positionString / $durationString"
+                    handler.postDelayed(this, 200)
+                }
+            }
+        }
     }
 
     var menu: Menu? = null
@@ -207,6 +235,8 @@ class PlaylistFragment : Fragment() {
                 songCard.love_thumb.setColorFilter(
                     if (rating == true) 0xFF_FF_FF_00.toInt() else textColorActive
                 )
+                songCard.play_song.visibility = View.GONE
+                songCard.progress.visibility = View.VISIBLE
             } else {
                 songCard.setBackgroundColor(Color.TRANSPARENT)
                 songCard.song_title.setTextColor(textColorInactive)
@@ -230,39 +260,24 @@ class PlaylistFragment : Fragment() {
                     }
                     else textColorInactive
                 )
+                songCard.play_song.setColorFilter(textColorInactive)
+                songCard.progress.visibility = View.GONE
+                songCard.play_song.visibility = View.VISIBLE
             }
         }
 
         init {
             songCard.setOnCreateContextMenuListener(this)
 
-            // Show menu on click.
-            var x = 0f
-            var y = 0f
-            songCard.setOnTouchListener { _, event ->
-                if (event.action == MotionEvent.ACTION_DOWN) {
-                    x = event.x
-                    y = event.y
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+                songCard.setOnLongClickListener {
+                    showPopupMenu()
+                    true
                 }
-                false
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                songCard.setOnClickListener {
-                    songCard.showContextMenu(x, y)
-                }
-                songCard.setOnLongClickListener {
-                    songCard.showContextMenu(x, y)
-                    true
-                }
-            } else {
-                songCard.setOnClickListener {
-                    showPopupMenu()
-                }
-                songCard.setOnLongClickListener {
-                    showPopupMenu()
-                    true
-                }
+            songCard.play_song.setOnClickListener {
+                menuPlay()
             }
 
             songCard.ban_thumb.setOnClickListener {
@@ -389,6 +404,8 @@ class PlaylistFragment : Fragment() {
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             holder.queueItemDescription = mediaController!!.queue[position].description
 
+            if (holder.adapterPosition == 0) holder.songCard.play_song.visibility = View.GONE
+
             // Set the colors
             holder.colorSong(
                 holder.adapterPosition == 0,
@@ -431,7 +448,7 @@ class PlaylistFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: List<Any>) {
-            if (payloads.isNotEmpty()) {
+            if (payloads.isNotEmpty() && holder.adapterPosition <= mediaController!!.queue.size) {
                 holder.queueItemDescription = mediaController!!.queue[holder.adapterPosition].description
                 @Suppress("UNCHECKED_CAST")
                 (payloads[0] as Map<String, Boolean>).apply {

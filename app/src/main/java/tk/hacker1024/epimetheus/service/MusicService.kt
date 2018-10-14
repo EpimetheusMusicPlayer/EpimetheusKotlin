@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.media.MediaMetadata
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -45,6 +46,7 @@ import tk.hacker1024.libepimetheus.*
 import tk.hacker1024.libepimetheus.data.Song
 import tk.hacker1024.libepimetheus.data.Station
 import java.io.IOException
+import java.util.concurrent.ExecutionException
 
 internal const val GENERIC_ART_URL = "https://www.pandora.com/web-version/1.25.1/images/album_500.png"
 
@@ -394,46 +396,50 @@ internal class MusicService : MediaBrowserServiceCompat() {
     }
 
     private fun updateMetadata() {
-        mediaPlayerHandler.post {
-            try {
-                mediaNotificationBuilder
-                    .setContentTitle(playlist[0].song.name)
-                    .setContentText("${playlist[0].song.artist} - ${playlist[0].song.album}")
-                    .setLargeIcon(playlist[0].artBitmap)
-                updateNotification()
-
-                mediaSession.setMetadata(
-                    MediaMetadataCompat.Builder()
-                        .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, mediaPlayer.duration)
-                        .putString(
-                            MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE,
-                            playlist[0].song.name
-                        )
-                        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, playlist[0].song.name)
-                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, playlist[0].song.album)
-                        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, playlist[0].song.artist)
-                        .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, playlist[0].artBitmap)
-                        .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, playlist[0].artUri.toString())
-                        .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, playlist[0].artBitmap)
-                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, playlist[0].artUri.toString())
-                        .build()
-                )
-
-                playlist.loadBitmapIfNeeded(0) {
-                    mediaNotificationBuilder.setLargeIcon(it)
+        if (playlist.size > 0) {
+            mediaPlayerHandler.post {
+                try {
+                    mediaNotificationBuilder
+                        .setContentTitle(playlist[0].song.name)
+                        .setContentText("${playlist[0].song.artist} - ${playlist[0].song.album}")
+                        .setLargeIcon(playlist[0].artBitmap)
                     updateNotification()
 
                     mediaSession.setMetadata(
-                        MediaMetadataCompat.Builder(mediaSession.controller.metadata)
+                        MediaMetadataCompat.Builder()
+                            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, mediaPlayer.duration)
+                            .putString(
+                                MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE,
+                                playlist[0].song.name
+                            )
+                            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, playlist[0].song.name)
+                            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, playlist[0].song.album)
+                            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, playlist[0].song.artist)
                             .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, playlist[0].artBitmap)
                             .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, playlist[0].artUri.toString())
                             .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, playlist[0].artBitmap)
                             .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, playlist[0].artUri.toString())
                             .build()
                     )
+
+                    println(mediaPlayer.duration)
+
+                    playlist.loadBitmapIfNeeded(0) {
+                        mediaNotificationBuilder.setLargeIcon(it)
+                        updateNotification()
+
+                        mediaSession.setMetadata(
+                            MediaMetadataCompat.Builder(mediaSession.controller.metadata)
+                                .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, playlist[0].artBitmap)
+                                .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, playlist[0].artUri.toString())
+                                .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, playlist[0].artBitmap)
+                                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, playlist[0].artUri.toString())
+                                .build()
+                        )
+                    }
+                } catch (e: IOException) {
+                    stop(MusicServiceResults.ERROR_NETWORK)
                 }
-            } catch (e: IOException) {
-                stop(MusicServiceResults.ERROR_NETWORK)
             }
         }
     }
@@ -515,11 +521,11 @@ internal class MusicService : MediaBrowserServiceCompat() {
         }
 
         override fun onFastForward() {
-            mediaPlayer.seekTo(mediaPlayer.currentPosition + 1500)
+            mediaPlayer.seekTo(mediaPlayer.currentPosition + 15000)
         }
 
         override fun onRewind() {
-            mediaPlayer.seekTo(mediaPlayer.currentPosition - 1500)
+            mediaPlayer.seekTo(mediaPlayer.currentPosition - 15000)
         }
 
         override fun onSeekTo(pos: Long) {
@@ -631,11 +637,19 @@ internal class MusicService : MediaBrowserServiceCompat() {
                     1f
                 )
 
-                Player.STATE_READY -> playbackStateBuilder.setState(
-                    if (mediaPlayer.playWhenReady) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
-                    mediaPlayer.currentPosition,
-                    mediaPlayer.playbackParameters.speed
-                )
+                Player.STATE_READY -> {
+                    playbackStateBuilder.setState(
+                        if (mediaPlayer.playWhenReady) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
+                        mediaPlayer.currentPosition,
+                        mediaPlayer.playbackParameters.speed
+                    )
+
+                    mediaSession.setMetadata(
+                        MediaMetadataCompat.Builder(mediaSession.controller.metadata)
+                            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, mediaPlayer.duration)
+                            .build()
+                    )
+                }
 
                 Player.STATE_IDLE -> {
                     playbackStateBuilder.setState(
@@ -771,6 +785,8 @@ internal class MusicService : MediaBrowserServiceCompat() {
                 }
             } catch (e: IOException) {
                 stop(MusicServiceResults.ERROR_NETWORK)
+            } catch (e: PandoraException) {
+                stop(MusicServiceResults.ERROR_NETWORK)
             }
         }
 
@@ -803,6 +819,10 @@ internal class MusicService : MediaBrowserServiceCompat() {
                                                     }
                                                 }
                                             } catch (e: GlideException) {
+                                                loaded = false
+                                            } catch (e: ExecutionException) {
+                                                loaded = false
+                                            } catch (e: IOException) {
                                                 stop(MusicServiceResults.ERROR_NETWORK)
                                             }
                                             callback?.invoke(artBitmap)
