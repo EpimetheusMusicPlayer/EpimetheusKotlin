@@ -62,7 +62,12 @@ class BrowseFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_browse, container, false)!!.apply {
             pager.adapter = PagerAdapter(childFragmentManager)
 
-            tabs.setBackgroundColor(ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].darkMuted.value!!)
+            ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].darkVibrant.observe(
+                this@BrowseFragment,
+                Observer {
+                    tabs.setBackgroundColor(it)
+                }
+            )
         }
     }
 
