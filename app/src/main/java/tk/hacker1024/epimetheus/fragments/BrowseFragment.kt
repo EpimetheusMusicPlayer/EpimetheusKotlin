@@ -43,7 +43,6 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.GlideApp
-import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.Browse
@@ -62,7 +61,7 @@ class BrowseFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_browse, container, false)!!.apply {
             pager.adapter = PagerAdapter(childFragmentManager)
 
-            ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].darkVibrant.observe(
+            ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].appBarColor.observe(
                 this@BrowseFragment,
                 Observer {
                     tabs.setBackgroundColor(it)

@@ -35,10 +35,7 @@ import kotlinx.android.synthetic.main.fragment_playlist.view.*
 import kotlinx.android.synthetic.main.song_card_inactive.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import tk.hacker1024.epimetheus.EpimetheusViewModel
-import tk.hacker1024.epimetheus.GlideApp
-import tk.hacker1024.epimetheus.MainActivity
-import tk.hacker1024.epimetheus.R
+import tk.hacker1024.epimetheus.*
 import tk.hacker1024.epimetheus.service.MusicService
 
 private const val ALBUM_ART_CORNER_RADIUS = 24
@@ -244,26 +241,24 @@ class PlaylistFragment : Fragment() {
     @SuppressLint("ClickableViewAccessibility")
     private inner class ViewHolder(internal val songCard: LinearLayout) : RecyclerView.ViewHolder(songCard), View.OnCreateContextMenuListener {
         lateinit var queueItemDescription: MediaDescriptionCompat
+        private var colorCalculated = false
 
         internal fun colorDynamic() {
             Palette.Builder(queueItemDescription.iconBitmap!!).generate().apply {
-                val darkVibrant = getDarkVibrantColor(Color.BLACK)
-                val darkMuted = getDarkMutedColor(Color.DKGRAY)
-                val lightVibrant = getLightVibrantColor(Color.WHITE)
-                val lightMuted = getLightMutedColor(lightVibrant)
+                getDarkVibrantColor(Color.DKGRAY).darken.also {
+                    activity?.runOnUiThread {
+                        viewModel.apply {
+                            appBarColor.value = getDarkVibrantColor(Color.DKGRAY)
+                            statusBarColor.value = it
+                            titleColor.value = getLightVibrantColor(Color.WHITE)
+                            subtitleColor.value = getLightMutedColor(Color.LTGRAY)
 
-                viewModel.apply {
-                    this.darkVibrant.postValue(darkVibrant)
-                    this.darkMuted.postValue(darkMuted)
-                    this.lightVibrant.postValue(lightVibrant)
-                    this.lightMuted.postValue(lightMuted)
-                }
-
-                activity?.runOnUiThread {
-                    songCard.setBackgroundColor(darkVibrant)
-                    songCard.song_title.setTextColor(lightVibrant)
-                    songCard.song_artist.setTextColor(lightMuted)
-                    songCard.song_album.setTextColor(lightMuted)
+                            songCard.setBackgroundColor(appBarColor.value!!)
+                            songCard.song_title.setTextColor(titleColor.value!!)
+                            songCard.song_artist.setTextColor(subtitleColor.value!!)
+                            songCard.song_album.setTextColor(subtitleColor.value!!)
+                        }
+                    }
                 }
             }
         }
@@ -271,8 +266,15 @@ class PlaylistFragment : Fragment() {
         @Suppress("DEPRECATION")
         internal fun colorSong(active: Boolean, rating: Boolean?) {
             if (active) {
-                GlobalScope.launch {
-                    colorDynamic()
+                if (!colorCalculated) {
+                    songCard.setBackgroundColor(textColorInactive)
+                    songCard.song_title.setTextColor(textColorActive)
+                    songCard.song_artist.setTextColor(textColorActive)
+                    songCard.song_album.setTextColor(textColorActive)
+                    GlobalScope.launch {
+                        colorDynamic()
+                    }
+                    colorCalculated = true
                 }
                 songCard.ban_progress.indeterminateDrawable.setTint(textColorActive)
                 songCard.love_progress.indeterminateDrawable.setTint(textColorActive)
@@ -285,6 +287,7 @@ class PlaylistFragment : Fragment() {
                 songCard.play_song.visibility = View.GONE
                 songCard.progress.visibility = View.VISIBLE
             } else {
+                colorCalculated = false
                 songCard.setBackgroundColor(Color.TRANSPARENT)
                 songCard.song_title.setTextColor(textColorInactive)
                 songCard.song_artist.setTextColor(textColorInactive)
@@ -449,54 +452,55 @@ class PlaylistFragment : Fragment() {
             )
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            holder.queueItemDescription = mediaController!!.queue[position].description
+            if (position < mediaController!!.queue.size) {
+                holder.queueItemDescription = mediaController!!.queue[position].description
 
-            if (holder.adapterPosition == 0) holder.songCard.play_song.visibility = View.GONE
+                if (holder.adapterPosition == 0) holder.songCard.play_song.visibility = View.GONE
 
-            // Set the colors
-            holder.colorSong(
-                holder.adapterPosition == 0,
-                if (holder.queueItemDescription.extras!!.containsKey("rating"))
-                    holder.queueItemDescription.extras!!.getBoolean("rating")
-                else null
-            )
+                // Set the colors
+                holder.colorSong(
+                    holder.adapterPosition == 0,
+                    if (holder.queueItemDescription.extras!!.containsKey("rating"))
+                        holder.queueItemDescription.extras!!.getBoolean("rating")
+                    else null
+                )
 
-            // Bind the song title, artist, and album
-            holder.songCard.song_title.text = holder.queueItemDescription.title
-            holder.songCard.song_artist.text = holder.queueItemDescription.subtitle
-            holder.songCard.song_album.text = holder.queueItemDescription.description
-            holder.songCard.progress.text = "-- / --"
+                // Bind the song title, artist, and album
+                holder.songCard.song_title.text = holder.queueItemDescription.title
+                holder.songCard.song_artist.text = holder.queueItemDescription.subtitle
+                holder.songCard.song_album.text = holder.queueItemDescription.description
+                holder.songCard.progress.text = "-- / --"
 
-            GlideApp
-                .with(this@PlaylistFragment)
-                .asBitmap()
-                .load(holder.queueItemDescription.iconBitmap)
-                .diskCacheStrategy(DiskCacheStrategy.NONE)
-                .transform(RoundedCorners(ALBUM_ART_CORNER_RADIUS))
-                .into(holder.songCard.song_album_art)
+                GlideApp
+                    .with(this@PlaylistFragment)
+                    .asBitmap()
+                    .load(holder.queueItemDescription.iconBitmap)
+                    .diskCacheStrategy(DiskCacheStrategy.NONE)
+                    .transform(RoundedCorners(ALBUM_ART_CORNER_RADIUS))
+                    .into(holder.songCard.song_album_art)
 
-            // Bind the rating progress
-            if (holder.queueItemDescription.extras!!.containsKey("settingFeedback")) {
-                (holder.queueItemDescription.extras!!.getBoolean("settingFeedback")).apply {
-                    if (this) {
-                        holder.songCard.love_thumb.visibility = View.GONE
-                        holder.songCard.love_progress.visibility = View.VISIBLE
-                    } else {
-                        holder.songCard.ban_thumb.visibility = View.GONE
-                        holder.songCard.ban_progress.visibility = View.VISIBLE
+                // Bind the rating progress
+                if (holder.queueItemDescription.extras!!.containsKey("settingFeedback")) {
+                    (holder.queueItemDescription.extras!!.getBoolean("settingFeedback")).apply {
+                        if (this) {
+                            holder.songCard.love_thumb.visibility = View.GONE
+                            holder.songCard.love_progress.visibility = View.VISIBLE
+                        } else {
+                            holder.songCard.ban_thumb.visibility = View.GONE
+                            holder.songCard.ban_progress.visibility = View.VISIBLE
+                        }
                     }
+                } else {
+                    holder.songCard.ban_progress.visibility = View.GONE
+                    holder.songCard.love_progress.visibility = View.GONE
+                    holder.songCard.ban_thumb.visibility = View.VISIBLE
+                    holder.songCard.love_thumb.visibility = View.VISIBLE
                 }
-            } else {
-                holder.songCard.ban_progress.visibility = View.GONE
-                holder.songCard.love_progress.visibility = View.GONE
-                holder.songCard.ban_thumb.visibility = View.VISIBLE
-                holder.songCard.love_thumb.visibility = View.VISIBLE
             }
-
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: List<Any>) {
-            if (payloads.isNotEmpty() && position <= mediaController!!.queue.size) {
+            if (payloads.isNotEmpty() && position < mediaController!!.queue.size) {
                 holder.queueItemDescription = mediaController!!.queue[position].description
                 @Suppress("UNCHECKED_CAST")
                 (payloads[0] as Map<String, Boolean>).apply {

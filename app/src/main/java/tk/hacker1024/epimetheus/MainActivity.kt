@@ -30,7 +30,6 @@ import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.dialogs.showNetworkErrorDialog
 import tk.hacker1024.epimetheus.dialogs.showPandoraErrorDialog
 import tk.hacker1024.epimetheus.fragments.AUTH_SHARED_PREFS_NAME
-import tk.hacker1024.epimetheus.fragments.MediaControlFragment
 import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
 import tk.hacker1024.epimetheus.service.MusicService
 import tk.hacker1024.epimetheus.service.MusicServiceResults
@@ -41,6 +40,17 @@ import tk.hacker1024.libepimetheus.data.Station
 import java.io.IOException
 
 // TODO manage audio focus
+
+inline val @receiver:ColorInt Int.darken: Int
+    @ColorInt get() {
+        return Color.HSVToColor(
+            FloatArray(3).apply {
+                Color.colorToHSV(this@darken, this)
+            }.apply {
+                this[2] *= 0.8f
+            }
+        )
+    }
 
 internal class EpimetheusViewModel : ViewModel() {
     internal var user = MutableLiveData<User>()
@@ -66,10 +76,10 @@ internal class EpimetheusViewModel : ViewModel() {
         }
     }
 
-    val darkVibrant = MutableLiveData<Int>()
-    val darkMuted = MutableLiveData<Int>()
-    val lightVibrant = MutableLiveData<Int>()
-    val lightMuted = MutableLiveData<Int>()
+    val appBarColor = MutableLiveData<Int>()
+    val statusBarColor = MutableLiveData<Int>()
+    val titleColor = MutableLiveData<Int>()
+    val subtitleColor = MutableLiveData<Int>()
 }
 
 class MainActivity : AppCompatActivity() {
@@ -134,27 +144,25 @@ class MainActivity : AppCompatActivity() {
         )
 
         ViewModelProviders.of(this)[EpimetheusViewModel::class.java].apply {
-            darkVibrant.observe(this@MainActivity, Observer {
+            appBarColor.observe(this@MainActivity, Observer {
                 if (it == 0) {
                     @Suppress("DEPRECATION")
-                    darkMuted.postValue(
+                    appBarColor.value =
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
                             resources.getColor(R.color.colorPrimary, null)
                         else resources.getColor(R.color.colorPrimary)
-                    )
                 } else {
                     toolbar.setBackgroundColor(it)
                 }
             })
 
-            darkMuted.observe(this@MainActivity, Observer {
+            statusBarColor.observe(this@MainActivity, Observer {
                 if (it == 0) {
                     @Suppress("DEPRECATION")
-                    darkVibrant.postValue(
+                    statusBarColor.value =
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
                             resources.getColor(R.color.colorPrimary, null)
                         else resources.getColor(R.color.colorPrimaryDark)
-                    )
                 } else {
                     window.statusBarColor = it
                 }

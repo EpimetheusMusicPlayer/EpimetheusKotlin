@@ -3,11 +3,7 @@ package tk.hacker1024.epimetheus.fragments
 import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.drawable.Drawable
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
@@ -15,30 +11,18 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.annotation.ColorInt
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.fragment.findNavController
 import androidx.palette.graphics.Palette
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.target.Target
-import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fragment_media_control.*
 import kotlinx.android.synthetic.main.fragment_media_control.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import tk.hacker1024.epimetheus.EpimetheusViewModel
-import tk.hacker1024.epimetheus.GlideApp
-import tk.hacker1024.epimetheus.MainActivity
-import tk.hacker1024.epimetheus.R
+import tk.hacker1024.epimetheus.*
 import tk.hacker1024.epimetheus.service.MusicService
 
 class MediaControlFragment : Fragment() {
@@ -55,13 +39,13 @@ class MediaControlFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        viewModel.darkVibrant.observe(this, Observer {
+        viewModel.appBarColor.observe(this, Observer {
             if (it != 0) view.setBackgroundColor(it)
         })
-        viewModel.lightVibrant.observe(this, Observer {
+        viewModel.titleColor.observe(this, Observer {
             if (it != 0) view.playing_title.setTextColor(it)
         })
-        viewModel.lightMuted.observe(this, Observer {
+        viewModel.subtitleColor.observe(this, Observer {
             if (it != 0) view.playing_subtitle.setTextColor(it)
         })
 
@@ -69,8 +53,8 @@ class MediaControlFragment : Fragment() {
             mediaController!!.transportControls.stop()
             view.visibility = View.GONE
 
-            viewModel.darkMuted.postValue(0)
-            viewModel.darkVibrant.postValue(0)
+            viewModel.statusBarColor.postValue(0)
+            viewModel.appBarColor.postValue(0)
         }
 
         view.rewind.setOnClickListener {
@@ -195,10 +179,10 @@ class MediaControlFragment : Fragment() {
                         Palette.Builder(metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART))
                             .generate().apply {
                                 viewModel.apply {
-                                    darkVibrant.postValue(getDarkVibrantColor(Color.BLACK))
-                                    darkMuted.postValue(getDarkMutedColor(Color.DKGRAY))
-                                    lightVibrant.postValue(getLightVibrantColor(Color.WHITE))
-                                    lightMuted.postValue(getLightMutedColor(Color.WHITE))
+                                    appBarColor.postValue(getDarkVibrantColor(Color.DKGRAY))
+                                    statusBarColor.postValue(getDarkVibrantColor(Color.DKGRAY).darken)
+                                    titleColor.postValue(getLightVibrantColor(Color.WHITE))
+                                    subtitleColor.postValue(getLightMutedColor(Color.LTGRAY))
                                 }
                             }
                     }
