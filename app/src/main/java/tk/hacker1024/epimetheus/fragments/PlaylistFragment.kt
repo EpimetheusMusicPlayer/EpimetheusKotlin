@@ -30,7 +30,6 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.fragment_media_control.view.*
 import kotlinx.android.synthetic.main.fragment_playlist.*
 import kotlinx.android.synthetic.main.fragment_playlist.view.*
 import kotlinx.android.synthetic.main.song_card_inactive.view.*
@@ -57,35 +56,37 @@ class PlaylistFragment : Fragment() {
 
         viewModel = ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java]
 
-        requireContext().obtainStyledAttributes(
-            intArrayOf(
-                android.R.attr.textColorPrimaryInverse,
-                android.R.attr.textColorSecondary
-            )
-        ).apply {
-            @SuppressLint("ResourceType")
-            textColorActive = getColor(0, 0xFF_FF_FF_FF.toInt())
-            @SuppressLint("ResourceType")
-            textColorInactive = getColor(1, 0x8A_00_00_00.toInt())
-            recycle()
-        }
-
-        if (arguments!!.getBoolean("start")) {
-            findNavController().graph[R.id.playlistFragment].setDefaultArguments(
-                bundleOf(
-                    "stationIndex" to arguments!!.getInt("stationIndex"),
-                    "stations" to null,
-                    "start" to false
+        GlobalScope.launch {
+            requireContext().obtainStyledAttributes(
+                intArrayOf(
+                    android.R.attr.textColorPrimaryInverse,
+                    android.R.attr.textColorSecondary
                 )
-            )
+            ).apply {
+                @SuppressLint("ResourceType")
+                textColorActive = getColor(0, 0xFF_FF_FF_FF.toInt())
+                @SuppressLint("ResourceType")
+                textColorInactive = getColor(1, 0x8A_00_00_00.toInt())
+                recycle()
+            }
 
-            ContextCompat.startForegroundService(
-                requireContext(),
-                Intent(context, MusicService::class.java)
-                    .putExtra("pandoraUserObject", viewModel.user.value!!)
-                    .putExtra("stationIndex", arguments!!.getInt("stationIndex"))
-                    .putParcelableArrayListExtra("stations", arguments!!.getParcelableArrayList("stations"))
-            )
+            if (arguments!!.getBoolean("start")) {
+                findNavController().graph[R.id.playlistFragment].setDefaultArguments(
+                    bundleOf(
+                        "stationIndex" to arguments!!.getInt("stationIndex"),
+                        "stations" to null,
+                        "start" to false
+                    )
+                )
+
+                ContextCompat.startForegroundService(
+                    requireContext(),
+                    Intent(context, MusicService::class.java)
+                        .putExtra("pandoraUserObject", viewModel.user.value!!)
+                        .putExtra("stationIndex", arguments!!.getInt("stationIndex"))
+                        .putParcelableArrayListExtra("stations", arguments!!.getParcelableArrayList("stations"))
+                )
+            }
         }
     }
 
@@ -121,19 +122,26 @@ class PlaylistFragment : Fragment() {
     override fun onStart() {
         super.onStart()
 
-        if (!arguments!!.getBoolean("start")) {
-            (childFragmentManager.findFragmentById(R.id.fragment_media_control) as MediaControlFragment).showIfServiceRunning()
-        } else {
-            (childFragmentManager.findFragmentById(R.id.fragment_media_control) as MediaControlFragment).show()
-        }
+        GlobalScope.launch {
+            if (!arguments!!.getBoolean("start")) {
+                (childFragmentManager.findFragmentById(R.id.fragment_media_control) as MediaControlFragment).showIfServiceRunning()
+            } else {
+                (childFragmentManager.findFragmentById(R.id.fragment_media_control) as MediaControlFragment).show()
+            }
 
-        view?.song_list?.visibility = View.GONE
-        view?.loading_widget?.visibility = View.VISIBLE
-        (requireActivity() as MainActivity).connectMediaBrowser {
-            mediaController = MediaControllerCompat.getMediaController(requireActivity())
-            mediaController!!.registerCallback(controllerCallback)
-            mediaController!!.queue?.apply { controllerCallback.onQueueChanged(this) }
-            controllerCallback.handler.post(controllerCallback.updateProgress)
+            requireActivity().runOnUiThread {
+                view?.song_list?.visibility = View.GONE
+                view?.loading_widget?.visibility = View.VISIBLE
+            }
+
+            (requireActivity() as MainActivity).connectMediaBrowser {
+                mediaController = MediaControllerCompat.getMediaController(requireActivity())
+                requireActivity().runOnUiThread {
+                    mediaController!!.registerCallback(controllerCallback)
+                    mediaController!!.queue?.apply { controllerCallback.onQueueChanged(this) }
+                }
+                controllerCallback.handler.post(controllerCallback.updateProgress)
+            }
         }
     }
 
