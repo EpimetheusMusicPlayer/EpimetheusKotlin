@@ -212,7 +212,7 @@ class StationListFragment : Fragment() {
 
             card.setOnClickListener {
                 findNavController().navigate(
-                    R.id.playlistFragment,
+                    R.id.openAndPlayStationPlaylist,
                     bundleOf(
                         "stations" to viewModel.getStationList(user).value,
                         "stationIndex" to adapterPosition,

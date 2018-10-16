@@ -99,7 +99,7 @@ class MediaControlFragment : Fragment() {
         view.setOnClickListener {
             findNavController().apply {
                 if (currentDestination!!.id != R.id.playlistFragment) {
-                    navigate(R.id.playlistFragment)
+                    navigate(R.id.openPlaylist)
                 }
             }
         }
