@@ -198,7 +198,7 @@ class MediaControlFragment : Fragment() {
                                     darkVibrant.postValue(getDarkVibrantColor(Color.BLACK))
                                     darkMuted.postValue(getDarkMutedColor(Color.DKGRAY))
                                     lightVibrant.postValue(getLightVibrantColor(Color.WHITE))
-                                    lightMuted.postValue(getLightVibrantColor(Color.WHITE))
+                                    lightMuted.postValue(getLightMutedColor(Color.WHITE))
                                 }
                             }
                     }
