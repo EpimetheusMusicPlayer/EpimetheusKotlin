@@ -2,78 +2,127 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/fragment_media_control_layout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     android:background="@color/colorPrimaryDark"
+    android:paddingTop="8dp"
     android:visibility="gone"
     tools:context=".fragments.MediaControlFragment"
     tools:visibility="visible">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+    <ImageView
+        android:id="@+id/playing_art"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="8dp"
+        android:contentDescription="@string/album_cover"
+        app:layout_constraintBottom_toTopOf="@+id/play_pause"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        tools:src="@tools:sample/avatars" />
 
-        <ImageView
-            android:id="@+id/stop"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="@string/stop"
-            android:padding="4dp"
-            android:src="@drawable/ic_stop_black_24dp"
-            android:tint="?android:attr/textColorPrimaryInverse" />
+    <TextView
+        android:id="@+id/playing_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginEnd="8dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="?android:textColorPrimaryInverse"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/playing_art"
+        app:layout_constraintTop_toTopOf="@+id/playing_art"
+        tools:text="Hall of Fame" />
 
-        <ImageView
-            android:id="@+id/rewind"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="@string/rewind"
-            android:padding="4dp"
-            android:src="@drawable/ic_fast_rewind_black_24dp"
-            android:tint="?android:attr/textColorPrimaryInverse" />
+    <TextView
+        android:id="@+id/playing_subtitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:singleLine="true"
+        android:ellipsize="marquee"
+        android:marqueeRepeatLimit ="marquee_forever"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:scrollHorizontally="true"
+        android:textColor="?android:textColorPrimaryInverse"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="@+id/playing_title"
+        app:layout_constraintStart_toStartOf="@+id/playing_title"
+        app:layout_constraintTop_toBottomOf="@+id/playing_title"
+        tools:text="The Script (#3)" />
 
-        <ImageView
-            android:id="@+id/play_pause"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="@string/play"
-            android:padding="4dp"
-            android:src="@drawable/ic_pause_black_24dp"
-            android:tint="?android:attr/textColorPrimaryInverse" />
+    <ImageView
+        android:id="@+id/stop"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:contentDescription="@string/stop"
+        android:padding="4dp"
+        android:src="@drawable/ic_stop_black_24dp"
+        android:tint="?android:attr/textColorPrimaryInverse"
+        app:layout_constraintBottom_toBottomOf="@+id/play_pause"
+        app:layout_constraintEnd_toStartOf="@+id/rewind"
+        app:layout_constraintHorizontal_chainStyle="spread_inside"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/play_pause" />
 
-        <ImageView
-            android:id="@+id/fast_forward"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="@string/fast_forward"
-            android:padding="4dp"
-            android:src="@drawable/ic_fast_forward_black_24dp"
-            android:tint="?android:attr/textColorPrimaryInverse" />
+    <ImageView
+        android:id="@+id/rewind"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:contentDescription="@string/rewind"
+        android:padding="4dp"
+        android:src="@drawable/ic_fast_rewind_black_24dp"
+        android:tint="?android:attr/textColorPrimaryInverse"
+        app:layout_constraintBottom_toBottomOf="@+id/play_pause"
+        app:layout_constraintEnd_toStartOf="@+id/play_pause"
+        app:layout_constraintStart_toEndOf="@+id/stop"
+        app:layout_constraintTop_toTopOf="@+id/play_pause" />
 
-        <ImageView
-            android:id="@+id/skip"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="@string/skip"
-            android:padding="4dp"
-            android:src="@drawable/ic_skip_next_black_24dp"
-            android:tint="?android:attr/textColorPrimaryInverse" />
-    </LinearLayout>
+    <ImageView
+        android:id="@+id/play_pause"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:layout_marginBottom="8dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:contentDescription="@string/play"
+        android:padding="4dp"
+        android:src="@drawable/ic_pause_black_24dp"
+        android:tint="?android:attr/textColorPrimaryInverse"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/fast_forward"
+        app:layout_constraintStart_toEndOf="@+id/rewind" />
+
+    <ImageView
+        android:id="@+id/fast_forward"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:contentDescription="@string/fast_forward"
+        android:padding="4dp"
+        android:src="@drawable/ic_fast_forward_black_24dp"
+        android:tint="?android:attr/textColorPrimaryInverse"
+        app:layout_constraintBottom_toBottomOf="@+id/play_pause"
+        app:layout_constraintEnd_toStartOf="@+id/skip"
+        app:layout_constraintStart_toEndOf="@+id/play_pause"
+        app:layout_constraintTop_toTopOf="@+id/play_pause" />
+
+    <ImageView
+        android:id="@+id/skip"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:contentDescription="@string/skip"
+        android:padding="4dp"
+        android:src="@drawable/ic_skip_next_black_24dp"
+        android:tint="?android:attr/textColorPrimaryInverse"
+        app:layout_constraintBottom_toBottomOf="@+id/play_pause"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/fast_forward" />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -72,7 +72,7 @@
         android:id="@+id/fragment_media_control"
         class="tk.hacker1024.epimetheus.fragments.MediaControlFragment"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="56dp"
         android:layout_weight="0"
         tools:layout="@layout/fragment_media_control" />
 </LinearLayout>

@@ -43,6 +43,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.GlideApp
+import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.Browse
@@ -60,6 +61,8 @@ class BrowseFragment : Fragment() {
     ): View {
         return inflater.inflate(R.layout.fragment_browse, container, false)!!.apply {
             pager.adapter = PagerAdapter(childFragmentManager)
+
+            tabs.setBackgroundColor(ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].darkMuted.value!!)
         }
     }
 
@@ -194,7 +197,7 @@ class RecommendedFragment : Fragment() {
                         .transform(RoundedCorners(8))
                 )
                 .listener(ColorExtractor(holder))
-                .into(holder.card.art)
+                .into(holder.card.playing_art)
 
             holder.card.title.text = dataSource[position].name
             holder.card.subtitle.text = dataSource[position].listenerCount!!.run {
@@ -270,8 +273,7 @@ class CategoryFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        user =
-                ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].user.value!!
+        user = ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].user.value!!
         viewModel = ViewModelProviders.of(this)[CategoriesViewModel::class.java]
 
         if (viewModel.categories.value == null) {

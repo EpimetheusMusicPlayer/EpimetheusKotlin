@@ -1,10 +1,13 @@
 package tk.hacker1024.epimetheus
 
 import android.content.*
+import android.graphics.Color
 import android.media.AudioManager
+import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
+import androidx.annotation.ColorInt
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.view.GravityCompat
@@ -27,6 +30,7 @@ import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.dialogs.showNetworkErrorDialog
 import tk.hacker1024.epimetheus.dialogs.showPandoraErrorDialog
 import tk.hacker1024.epimetheus.fragments.AUTH_SHARED_PREFS_NAME
+import tk.hacker1024.epimetheus.fragments.MediaControlFragment
 import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
 import tk.hacker1024.epimetheus.service.MusicService
 import tk.hacker1024.epimetheus.service.MusicServiceResults
@@ -61,6 +65,11 @@ internal class EpimetheusViewModel : ViewModel() {
             )
         }
     }
+
+    val darkVibrant = MutableLiveData<Int>()
+    val darkMuted = MutableLiveData<Int>()
+    val lightVibrant = MutableLiveData<Int>()
+    val lightMuted = MutableLiveData<Int>()
 }
 
 class MainActivity : AppCompatActivity() {
@@ -123,6 +132,34 @@ class MainActivity : AppCompatActivity() {
             connectionCallback,
             null
         )
+
+        ViewModelProviders.of(this)[EpimetheusViewModel::class.java].apply {
+            darkVibrant.observe(this@MainActivity, Observer {
+                if (it == 0) {
+                    @Suppress("DEPRECATION")
+                    darkMuted.postValue(
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                            resources.getColor(R.color.colorPrimary, null)
+                        else resources.getColor(R.color.colorPrimary)
+                    )
+                } else {
+                    toolbar.setBackgroundColor(it)
+                }
+            })
+
+            darkMuted.observe(this@MainActivity, Observer {
+                if (it == 0) {
+                    @Suppress("DEPRECATION")
+                    darkVibrant.postValue(
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                            resources.getColor(R.color.colorPrimary, null)
+                        else resources.getColor(R.color.colorPrimaryDark)
+                    )
+                } else {
+                    window.statusBarColor = it
+                }
+            })
+        }
     }
 
     override fun onResume() {

@@ -22,15 +22,20 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.get
+import androidx.palette.graphics.Palette
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.fragment_media_control.view.*
 import kotlinx.android.synthetic.main.fragment_playlist.*
 import kotlinx.android.synthetic.main.fragment_playlist.view.*
 import kotlinx.android.synthetic.main.song_card_inactive.view.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.MainActivity
@@ -40,6 +45,7 @@ import tk.hacker1024.epimetheus.service.MusicService
 private const val ALBUM_ART_CORNER_RADIUS = 24
 
 class PlaylistFragment : Fragment() {
+    internal lateinit var viewModel: EpimetheusViewModel
     private var mediaController: MediaControllerCompat? = null
     private var cachedSize = 0
 
@@ -48,6 +54,8 @@ class PlaylistFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        viewModel = ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java]
 
         requireContext().obtainStyledAttributes(
             intArrayOf(
@@ -74,7 +82,7 @@ class PlaylistFragment : Fragment() {
             ContextCompat.startForegroundService(
                 requireContext(),
                 Intent(context, MusicService::class.java)
-                    .putExtra("pandoraUserObject", ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].user.value!!)
+                    .putExtra("pandoraUserObject", viewModel.user.value!!)
                     .putExtra("stationIndex", arguments!!.getInt("stationIndex"))
                     .putParcelableArrayListExtra("stations", arguments!!.getParcelableArrayList("stations"))
             )
@@ -86,6 +94,16 @@ class PlaylistFragment : Fragment() {
             song_list.apply {
                 layoutManager = LinearLayoutManager(requireContext())
                 adapter = SongRecyclerAdapter()
+
+                addOnScrollListener(
+                    object : RecyclerView.OnScrollListener() {
+                        override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                            requireActivity().toolbar_layout.elevation =
+                                    if ((song_list.layoutManager!! as LinearLayoutManager)
+                                            .findFirstCompletelyVisibleItemPosition() == 0) 0f else 10.8f
+                        }
+                    }
+                )
             }
         }
     }
@@ -123,6 +141,11 @@ class PlaylistFragment : Fragment() {
         super.onStop()
         mediaController?.unregisterCallback(controllerCallback)
         mediaController = null
+    }
+
+    override fun onDestroy() {
+        requireActivity().toolbar_layout.elevation = 10.8f
+        super.onDestroy()
     }
 
     private val controllerCallback = object : MediaControllerCompat.Callback() {
@@ -214,19 +237,35 @@ class PlaylistFragment : Fragment() {
     private inner class ViewHolder(internal val songCard: LinearLayout) : RecyclerView.ViewHolder(songCard), View.OnCreateContextMenuListener {
         lateinit var queueItemDescription: MediaDescriptionCompat
 
+        internal fun colorDynamic() {
+            Palette.Builder(queueItemDescription.iconBitmap!!).generate().apply {
+                val darkVibrant = getDarkVibrantColor(Color.BLACK)
+                val darkMuted = getDarkMutedColor(Color.DKGRAY)
+                val lightVibrant = getLightVibrantColor(Color.WHITE)
+                val lightMuted = getLightMutedColor(lightVibrant)
+
+                viewModel.apply {
+                    this.darkVibrant.postValue(darkVibrant)
+                    this.darkMuted.postValue(darkMuted)
+                    this.lightVibrant.postValue(lightVibrant)
+                    this.lightMuted.postValue(lightMuted)
+                }
+
+                activity?.runOnUiThread {
+                    songCard.setBackgroundColor(darkVibrant)
+                    songCard.song_title.setTextColor(lightVibrant)
+                    songCard.song_artist.setTextColor(lightMuted)
+                    songCard.song_album.setTextColor(lightMuted)
+                }
+            }
+        }
+
         @Suppress("DEPRECATION")
         internal fun colorSong(active: Boolean, rating: Boolean?) {
             if (active) {
-                songCard.setBackgroundColor(
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        resources.getColor(R.color.colorPrimary, null)
-                    } else {
-                        resources.getColor(R.color.colorPrimary)
-                    }
-                )
-                songCard.song_title.setTextColor(textColorActive)
-                songCard.song_artist.setTextColor(textColorActive)
-                songCard.song_album.setTextColor(textColorActive)
+                GlobalScope.launch {
+                    colorDynamic()
+                }
                 songCard.ban_progress.indeterminateDrawable.setTint(textColorActive)
                 songCard.love_progress.indeterminateDrawable.setTint(textColorActive)
                 songCard.ban_thumb.setColorFilter(
@@ -449,8 +488,8 @@ class PlaylistFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: List<Any>) {
-            if (payloads.isNotEmpty() && holder.adapterPosition <= mediaController!!.queue.size) {
-                holder.queueItemDescription = mediaController!!.queue[holder.adapterPosition].description
+            if (payloads.isNotEmpty() && position <= mediaController!!.queue.size) {
+                holder.queueItemDescription = mediaController!!.queue[position].description
                 @Suppress("UNCHECKED_CAST")
                 (payloads[0] as Map<String, Boolean>).apply {
                     if (get("art") == true) {
@@ -462,6 +501,13 @@ class PlaylistFragment : Fragment() {
                             .transform(RoundedCorners(ALBUM_ART_CORNER_RADIUS))
                             .placeholder(holder.songCard.song_album_art.drawable)
                             .into(holder.songCard.song_album_art)
+
+                        holder.colorSong(
+                            holder.adapterPosition == 0,
+                            if (holder.queueItemDescription.extras!!.containsKey("rating"))
+                                holder.queueItemDescription.extras!!.getBoolean("rating")
+                            else null
+                        )
                     }
                     if (get("rating") == true) {
                         if (holder.queueItemDescription.extras!!.containsKey("settingFeedback")) {

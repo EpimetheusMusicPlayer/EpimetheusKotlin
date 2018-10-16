@@ -2,8 +2,7 @@ package tk.hacker1024.epimetheus.fragments
 
 import android.content.SharedPreferences
 import android.os.Bundle
-import androidx.preference.Preference
-import androidx.preference.PreferenceFragment
+import androidx.fragment.app.transaction
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import tk.hacker1024.epimetheus.MainActivity
@@ -17,6 +16,14 @@ class SettingsFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
         findPreference("logout").setOnPreferenceClickListener {
             (activity as MainActivity).logout()
             true
+        }
+
+        // Add the media controls to make sure the colors are updated
+        childFragmentManager.transaction(allowStateLoss = true) {
+            MediaControlFragment().apply {
+                add(this, null)
+                hide(this)
+            }
         }
     }
 

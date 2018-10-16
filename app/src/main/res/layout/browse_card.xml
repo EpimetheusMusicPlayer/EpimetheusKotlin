@@ -13,7 +13,7 @@
         android:padding="8dp">
 
         <ImageView
-            android:id="@+id/art"
+            android:id="@+id/playing_art"
             android:layout_width="132dp"
             android:layout_height="132dp"
             android:adjustViewBounds="true"
@@ -25,7 +25,7 @@
             android:id="@+id/title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/art"
+            android:layout_below="@+id/playing_art"
             android:layout_alignParentStart="true"
             android:layout_alignParentEnd="true"
             android:layout_marginTop="8dp"
