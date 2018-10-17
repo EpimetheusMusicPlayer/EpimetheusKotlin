@@ -32,14 +32,15 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.util.FixedPreloadSizeProvider
+import com.bumptech.glide.util.ViewPreloadSizeProvider
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.browse_card.view.*
 import kotlinx.android.synthetic.main.browse_tab_categories.*
 import kotlinx.android.synthetic.main.browse_tab_categories.view.*
 import kotlinx.android.synthetic.main.browse_tab_recommended.*
 import kotlinx.android.synthetic.main.browse_tab_recommended.view.*
-import kotlinx.android.synthetic.main.category_card.view.*
 import kotlinx.android.synthetic.main.fragment_browse.view.*
+import kotlinx.android.synthetic.main.station_card.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.EpimetheusViewModel
@@ -82,24 +83,26 @@ class BrowseFragment : Fragment() {
         super.onStop()
         requireActivity().toolbar_layout.elevation = 10.8f
     }
-}
 
-private class PagerAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm) {
-    override fun getCount() = 2
+    private inner class PagerAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm) {
+        override fun getCount() = 2
 
-    override fun getItem(position: Int) =
-        when (position) {
-            0 -> RecommendedFragment()
-            1 -> CategoryFragment()
-            else -> null
-        }
+        override fun getItem(position: Int) =
+            when (position) {
+                0 -> RecommendedFragment()
+                1 -> CategoryFragment()
+                else -> null
+            }
 
-    override fun getPageTitle(position: Int) =
-        when (position) {
-            0 -> "Suggested"
-            1 -> "Genres"
-            else -> null
-        }
+        override fun getPageTitle(position: Int) =
+            getString(
+                when (position) {
+                    0 -> R.string.tab_label_suggested
+                    1 -> R.string.tab_label_categories
+                    else -> R.string.app_name
+                }
+            )
+    }
 }
 
 class RecommendedViewModel : ViewModel() {
@@ -164,10 +167,11 @@ class RecommendedFragment : Fragment() {
                 if (genre_list.adapter == null) {
                     genre_list.apply {
                         adapter = Adapter(viewModel.recommendations.value?.genreStations)
+                        @Suppress("UNCHECKED_CAST")
                         addOnScrollListener(
                             RecyclerViewPreloader<String>(
                                 Glide.with(this),
-                                (adapter as Adapter),
+                                adapter as ListPreloader.PreloadModelProvider<String>,
                                 FixedPreloadSizeProvider(artSize, artSize),
                                 6
                             )
@@ -187,7 +191,6 @@ class RecommendedFragment : Fragment() {
     }
 
     private class ViewHolder(val card: CardView) : RecyclerView.ViewHolder(card)
-
     private inner class Adapter(val dataSource: List<Listenable>?) :
         RecyclerView.Adapter<ViewHolder>(), ListPreloader.PreloadModelProvider<String> {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
@@ -316,19 +319,39 @@ class CategoryFragment : Fragment() {
         category_list.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = Adapter()
+            @Suppress("UNCHECKED_CAST")
+            addOnScrollListener(
+                RecyclerViewPreloader<String>(
+                    this@CategoryFragment,
+                    adapter as ListPreloader.PreloadModelProvider<String>,
+                    ViewPreloadSizeProvider<String>(layoutInflater.inflate(R.layout.station_card, null, false).station_logo),
+                    30
+                )
+            )
         }
     }
 
-    private class ViewHolder(val item: LinearLayout) : RecyclerView.ViewHolder(item)
-    private inner class Adapter : RecyclerView.Adapter<ViewHolder>(),
-        ListPreloader.PreloadModelProvider<String> {
+    private inner class ViewHolder(val item: LinearLayout) : RecyclerView.ViewHolder(item) {
+        init {
+            item.setOnClickListener {
+                findNavController().navigate(
+                    BrowseFragmentDirections.actionBrowseFragmentToGenresFragment(
+                        viewModel.categories.value!![adapterPosition]
+                    )
+                )
+            }
+        }
+    }
+    private inner class Adapter : RecyclerView.Adapter<ViewHolder>(), ListPreloader.PreloadModelProvider<String> {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
             ViewHolder(
                 LayoutInflater.from(parent.context)
-                    .inflate(R.layout.category_card, parent, false)!! as LinearLayout
+                    .inflate(R.layout.station_card, parent, false)!! as LinearLayout
             )
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            holder.item.station_name.text = viewModel.categories.value!![position].name
+
             getPreloadRequestBuilder(viewModel.categories.value!![position].getArtUrl(artSize))
                 .transition(DrawableTransitionOptions.withCrossFade())
                 .thumbnail(
@@ -337,9 +360,7 @@ class CategoryFragment : Fragment() {
                         .load(GENERIC_ART_URL)
                         .transform(RoundedCorners(8))
                 )
-                .into(holder.item.category_art)
-
-            holder.item.category_name.text = viewModel.categories.value!![position].name
+                .into(holder.item.station_logo)
         }
 
         override fun getItemCount() = viewModel.categories.value?.size ?: 0

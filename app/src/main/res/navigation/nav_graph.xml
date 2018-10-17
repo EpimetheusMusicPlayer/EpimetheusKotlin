@@ -83,7 +83,15 @@
         android:id="@+id/browseFragment"
         android:name="tk.hacker1024.epimetheus.fragments.BrowseFragment"
         android:label="@string/fragment_label_browse"
-        tools:layout="@layout/fragment_browse" />
+        tools:layout="@layout/fragment_browse">
+        <action
+            android:id="@+id/action_browseFragment_to_genresFragment"
+            app:destination="@id/genresFragment"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+    </fragment>
     <action
         android:id="@+id/openPlaylist"
         app:destination="@id/playlistFragment"
@@ -91,4 +99,13 @@
         app:exitAnim="@anim/nav_default_exit_anim"
         app:popEnterAnim="@anim/nav_default_pop_enter_anim"
         app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+    <fragment
+        android:id="@+id/genresFragment"
+        android:name="tk.hacker1024.epimetheus.fragments.GenresFragment"
+        android:label="@string/fragment_label_genres"
+        tools:layout="@layout/fragment_genres">
+        <argument
+            android:name="category"
+            app:argType="tk.hacker1024.libepimetheus.data.search.GenreCategory" />
+    </fragment>
 </navigation>
