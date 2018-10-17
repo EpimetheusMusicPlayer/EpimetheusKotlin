@@ -16,6 +16,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProviders
+import androidx.navigation.fragment.findNavController
 import androidx.palette.graphics.Palette
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -43,6 +44,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.GlideApp
+import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.Browse
@@ -50,6 +52,7 @@ import tk.hacker1024.libepimetheus.StationRecommendations
 import tk.hacker1024.libepimetheus.User
 import tk.hacker1024.libepimetheus.data.search.GenreCategory
 import tk.hacker1024.libepimetheus.data.search.Listenable
+import java.io.IOException
 import kotlin.math.round
 
 class BrowseFragment : Fragment() {
@@ -117,13 +120,19 @@ class RecommendedFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        user =
-                ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].user.value!!
+        user = ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].user.value!!
         viewModel = ViewModelProviders.of(this)[RecommendedViewModel::class.java]
 
         if (viewModel.recommendations.value == null) {
             GlobalScope.launch {
-                viewModel.recommendations.postValue(Browse.getStationRecommendations(user))
+                try {
+                    viewModel.recommendations.postValue(Browse.getStationRecommendations(user))
+                } catch (e: IOException) {
+                    (requireActivity() as MainActivity).networkError {
+                        it.dismiss()
+                        findNavController().navigateUp()
+                    }
+                }
             }
         }
     }
@@ -282,7 +291,9 @@ class CategoryFragment : Fragment() {
 
         if (viewModel.categories.value == null) {
             GlobalScope.launch {
-                viewModel.categories.postValue(Browse.getGenreCategories(user))
+                try {
+                    viewModel.categories.postValue(Browse.getGenreCategories(user))
+                } catch (e: IOException) {}
             }
         }
     }
