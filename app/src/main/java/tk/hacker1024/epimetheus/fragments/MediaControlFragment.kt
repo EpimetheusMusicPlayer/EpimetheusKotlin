@@ -144,7 +144,9 @@ class MediaControlFragment : Fragment() {
     }
 
     internal fun show() {
-        view!!.visibility = View.VISIBLE
+        activity?.runOnUiThread {
+            view!!.visibility = View.VISIBLE
+        }
     }
 
     internal fun hide() {
