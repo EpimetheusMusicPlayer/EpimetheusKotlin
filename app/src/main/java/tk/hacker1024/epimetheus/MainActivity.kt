@@ -56,19 +56,19 @@ internal class EpimetheusViewModel : ViewModel() {
     internal var user = MutableLiveData<User>()
 
     private lateinit var stationList: MutableLiveData<ArrayList<Station>?>
-    internal fun getStationList(user: User): MutableLiveData<ArrayList<Station>?> {
+    internal fun getStationList(): MutableLiveData<ArrayList<Station>?> {
         if (!::stationList.isInitialized) {
             stationList = MutableLiveData()
-            loadStations(user)
+            loadStations()
         }
         return stationList
     }
 
-    internal fun loadStations(user: User) {
+    internal fun loadStations() {
         GlobalScope.launch  {
             stationList.postValue(
                 try {
-                    ArrayList(Stations.getStations(user))
+                    ArrayList(Stations.getStations(user.value!!))
                 } catch (e: IOException) {
                     null
                 }

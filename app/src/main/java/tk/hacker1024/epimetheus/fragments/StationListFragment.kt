@@ -62,7 +62,7 @@ class StationListFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        viewModel.getStationList(user).observe(this, Observer {
+        viewModel.getStationList().observe(this, Observer {
             if (it != null) {
                 view?.recyclerview_station_list?.adapter?.notifyDataSetChanged()
                 view?.recyclerview_station_list?.visibility = View.VISIBLE
@@ -70,7 +70,7 @@ class StationListFragment : Fragment() {
             } else {
                 (requireActivity() as MainActivity).networkError {
                     view?.recyclerview_station_list?.visibility = View.INVISIBLE
-                    viewModel.loadStations(user)
+                    viewModel.loadStations()
                 }
             }
         })
@@ -83,8 +83,8 @@ class StationListFragment : Fragment() {
                         object : ListPreloader.PreloadModelProvider<String> {
                             override fun getPreloadItems(position: Int) =
                                 mutableListOf(
-                                    viewModel.getStationList(user).value!![position].getArtUrl(
-                                        if (viewModel.getStationList(user).value!![position].isShuffle) 500 else artSize
+                                    viewModel.getStationList().value!![position].getArtUrl(
+                                        if (viewModel.getStationList().value!![position].isShuffle) 500 else artSize
                                     )
                                 )
 
@@ -111,23 +111,24 @@ class StationListFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         view.station_list_swipe_refresh_layout.setOnRefreshListener {
             view.recyclerview_station_list?.visibility = View.INVISIBLE
-            viewModel.loadStations(user)
+            viewModel.loadStations()
         }
     }
 
     override fun onStart() {
         super.onStart()
 
-        if (view?.station_list_swipe_refresh_layout?.isRefreshing == true) {
+        if (view?.station_list_swipe_refresh_layout?.isRefreshing == true || reloadOnShow) {
             view?.recyclerview_station_list?.visibility = View.INVISIBLE
-            viewModel.loadStations(user)
+            viewModel.loadStations()
+            reloadOnShow = false
         }
     }
 
     private inner class StationListAdapterViewHolder(val card: LinearLayout) : RecyclerView.ViewHolder(card) {
         init {
             card.setOnCreateContextMenuListener { menu, _, _ ->
-                val station = viewModel.getStationList(user).value!![adapterPosition]
+                val station = viewModel.getStationList().value!![adapterPosition]
 
                 requireActivity().menuInflater.inflate(R.menu.station_menu, menu)
                 menu.setHeaderTitle(station.name)
@@ -143,7 +144,7 @@ class StationListFragment : Fragment() {
                             .setView(editText.parent as View)
                             .setPositiveButton("Save") { dialog, _ ->
                                 if (editText.text.toString() != station.name && editText.text.isNotEmpty()) {
-                                    viewModel.getStationList(user).value!!.apply {
+                                    viewModel.getStationList().value!!.apply {
                                         indexOf(station).also { index ->
                                             this[index] = station.copy(
                                                 name = editText.text.toString()
@@ -171,27 +172,27 @@ class StationListFragment : Fragment() {
                 }
 
                 if (station.canDelete && !station.isThumbprint) {
-                    menu.findItem(R.id.delete_station).setOnMenuItemClickListener { _ ->
+                    menu.findItem(R.id.delete_station).setOnMenuItemClickListener {
                         AlertDialog.Builder(requireContext())
                             .setTitle("Delete ${station.name}")
                             .setIcon(R.drawable.ic_delete_black_24dp)
                             .setMessage("Are you sure?")
                             .setPositiveButton("Delete") { dialog, _ ->
-                                viewModel.getStationList(user).value!!.apply {
-                                    indexOf(station).also {
+                                viewModel.getStationList().value!!.apply {
+                                    indexOf(station).also { index ->
                                         (requireActivity() as MainActivity).connectMediaBrowser {
                                             MediaControllerCompat.getMediaController(requireActivity())
                                                 .apply {
                                                     if (
-                                                        extras.getInt("stationIndex") == it
+                                                        extras?.getInt("stationIndex") == index
                                                     ) {
                                                         transportControls.stop()
                                                         (childFragmentManager.findFragmentById(R.id.fragment_media_control) as MediaControlFragment).hide()
                                                     }
                                                 }
                                         }
-                                        removeAt(it)
-                                        recyclerview_station_list.adapter!!.notifyItemRemoved(it)
+                                        removeAt(index)
+                                        recyclerview_station_list.adapter!!.notifyItemRemoved(index)
                                     }
                                 }
                                 dialog.dismiss()
@@ -214,7 +215,7 @@ class StationListFragment : Fragment() {
                 findNavController().navigate(
                     R.id.openAndPlayStationPlaylist,
                     bundleOf(
-                        "stations" to viewModel.getStationList(user).value,
+                        "stations" to viewModel.getStationList().value,
                         "stationIndex" to adapterPosition,
                         "start" to true
                     )
@@ -236,14 +237,14 @@ class StationListFragment : Fragment() {
         // TODO maybe I should make the Shuffle station stand out more...
         override fun onBindViewHolder(holder: StationListAdapterViewHolder, position: Int) {
             // Bind the station name
-            holder.card.station_name.text = viewModel.getStationList(user).value!![position].name
+            holder.card.station_name.text = viewModel.getStationList().value!![position].name
 
             // Bind the station art
             GlideApp
                 .with(this@StationListFragment)
                 .load(
-                    viewModel.getStationList(user).value!![position].getArtUrl(
-                        if (viewModel.getStationList(user).value!![position].isShuffle) 500 else artSize
+                    viewModel.getStationList().value!![position].getArtUrl(
+                        if (viewModel.getStationList().value!![position].isShuffle) 500 else artSize
                     )
                 )
                 .transform(RoundedCorners(8))
@@ -257,6 +258,10 @@ class StationListFragment : Fragment() {
                 .into(holder.card.station_logo)
         }
 
-        override fun getItemCount() = viewModel.getStationList(user).value?.size ?: 0
+        override fun getItemCount() = viewModel.getStationList().value?.size ?: 0
+    }
+
+    companion object {
+        internal var reloadOnShow = false
     }
 }

@@ -9,6 +9,14 @@
     <string name="dialog_pandora_label">An external Pandora error has occurred.</string>
     <string name="dialog_pandora_message">Try again later.</string>
 
+    <string name="dialog_add_confirm_label">Add \"%1$s\"?</string>
+    <string name="dialog_add_confirm_message">The station will be added to your station list. You can remove it at any time.</string>
+
     <string name="dialog_default_ok">@android:string/ok</string>
     <string name="dialog_default_exit">Exit</string>
+
+    <string name="snackbar_adding_message">Adding \"%1$s\"…</string>
+
+    <string name="snackbar_added_message">Added \"%1$s\".</string>
+    <string name="snackbar_added_action">Station list</string>
 </resources>

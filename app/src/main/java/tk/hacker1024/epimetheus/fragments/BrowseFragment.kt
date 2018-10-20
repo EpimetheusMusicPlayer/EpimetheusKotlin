@@ -47,6 +47,9 @@ import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.R
+import tk.hacker1024.epimetheus.dialogs.showAddStationConfirmationDialog
+import tk.hacker1024.epimetheus.dialogs.showStationAddedSnackbar
+import tk.hacker1024.epimetheus.dialogs.showStationAddingSnackbar
 import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.Browse
 import tk.hacker1024.libepimetheus.StationRecommendations
@@ -225,6 +228,33 @@ class RecommendedFragment : Fragment() {
                     round(this / 1000f).toInt().run {
                         resources.getQuantityString(R.plurals.listenersThousands, this, this)
                     }
+                }
+            }
+
+            holder.card.setOnClickListener {
+                dataSource[position].apply {
+                    showAddStationConfirmationDialog(
+                        name,
+                        requireContext(),
+                        ok = { dialog, _ ->
+                            dialog.dismiss()
+                            showStationAddingSnackbar(name, view!!)
+                            GlobalScope.launch {
+                                try {
+                                    add(user)
+                                    StationListFragment.reloadOnShow = true
+                                    showStationAddedSnackbar(name, view!!, View.OnClickListener {
+                                        findNavController().popBackStack(
+                                            R.id.stationListFragment,
+                                            false
+                                        )
+                                    })
+                                } catch (e: IOException) {
+                                    (requireActivity() as MainActivity).networkError {}
+                                }
+                            }
+                        }
+                    )
                 }
             }
         }

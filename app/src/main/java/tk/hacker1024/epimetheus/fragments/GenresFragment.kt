@@ -28,6 +28,9 @@ import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.R
+import tk.hacker1024.epimetheus.dialogs.showAddStationConfirmationDialog
+import tk.hacker1024.epimetheus.dialogs.showStationAddedSnackbar
+import tk.hacker1024.epimetheus.dialogs.showStationAddingSnackbar
 import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.User
 import tk.hacker1024.libepimetheus.data.search.GenreCategory
@@ -102,7 +105,35 @@ class GenresFragment : Fragment() {
         })
     }
 
-    private class ViewHolder(val card: LinearLayout) : RecyclerView.ViewHolder(card)
+    private inner class ViewHolder(val card: LinearLayout) : RecyclerView.ViewHolder(card) {
+        init {
+            card.setOnClickListener {
+                showAddStationConfirmationDialog(
+                    card.station_name.text,
+                    requireContext(),
+                    ok = { dialog, _ ->
+                        dialog.dismiss()
+                        showStationAddingSnackbar(card.station_name.text, view!!)
+                        GlobalScope.launch {
+                            try {
+                                viewModel.genres.value!![adapterPosition].add(
+                                    ViewModelProviders.of(
+                                        requireActivity()
+                                    )[EpimetheusViewModel::class.java].user.value!!
+                                )
+                                StationListFragment.reloadOnShow = true
+                                showStationAddedSnackbar(card.station_name.text, view!!, View.OnClickListener {
+                                    findNavController().popBackStack(R.id.stationListFragment, false)
+                                })
+                            } catch (e: IOException) {
+                                (requireActivity() as MainActivity).networkError {}
+                            }
+                        }
+                    }
+                )
+            }
+        }
+    }
     private inner class Adapter : RecyclerView.Adapter<ViewHolder>(), ListPreloader.PreloadModelProvider<String> {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             return ViewHolder(
