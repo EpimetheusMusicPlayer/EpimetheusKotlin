@@ -118,7 +118,6 @@ class PlaylistFragment : Fragment() {
 
     override fun onStart() {
         super.onStart()
-
         GlobalScope.launch {
             if (!arguments!!.getBoolean("start")) {
                 (childFragmentManager.findFragmentById(R.id.fragment_media_control) as MediaControlFragment).showIfServiceRunning()
@@ -146,11 +145,6 @@ class PlaylistFragment : Fragment() {
         super.onStop()
         mediaController?.unregisterCallback(controllerCallback)
         mediaController = null
-    }
-
-    override fun onDestroy() {
-        requireActivity().toolbar_layout.elevation = 10.8f
-        super.onDestroy()
     }
 
     private val controllerCallback = object : MediaControllerCompat.Callback() {

@@ -82,11 +82,6 @@ class BrowseFragment : Fragment() {
         requireActivity().toolbar_layout.elevation = 0f
     }
 
-    override fun onStop() {
-        super.onStop()
-        requireActivity().toolbar_layout.elevation = 10.8f
-    }
-
     private inner class PagerAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm) {
         override fun getCount() = 2
 

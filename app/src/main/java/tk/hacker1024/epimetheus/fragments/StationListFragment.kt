@@ -25,6 +25,7 @@ import com.bumptech.glide.integration.recyclerview.RecyclerViewPreloader
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.util.ViewPreloadSizeProvider
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.edittext_dialog.view.*
 import kotlinx.android.synthetic.main.fragment_station_list.*
 import kotlinx.android.synthetic.main.fragment_station_list.view.*
@@ -123,6 +124,8 @@ class StationListFragment : Fragment() {
 
     override fun onStart() {
         super.onStart()
+
+        requireActivity().toolbar_layout.elevation = 10.8f
 
         view?.station_list_swipe_refresh_layout.apply {
             if (this?.isRefreshing == true || reloadOnShow) {

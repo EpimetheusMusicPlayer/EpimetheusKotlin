@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.fragment.app.transaction
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
+import kotlinx.android.synthetic.main.activity_main.*
 import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.R
 
@@ -29,6 +30,7 @@ class SettingsFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
 
     override fun onStart() {
         super.onStart()
+        requireActivity().toolbar_layout.elevation = 10.8f
         preferenceManager.sharedPreferences.registerOnSharedPreferenceChangeListener(this)
     }
 
