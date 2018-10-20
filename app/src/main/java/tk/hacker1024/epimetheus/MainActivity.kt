@@ -161,7 +161,7 @@ class MainActivity : AppCompatActivity() {
                     @Suppress("DEPRECATION")
                     statusBarColor.value =
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                            resources.getColor(R.color.colorPrimary, null)
+                            resources.getColor(R.color.colorPrimaryDark, null)
                         else resources.getColor(R.color.colorPrimaryDark)
                 } else {
                     window.statusBarColor = it
