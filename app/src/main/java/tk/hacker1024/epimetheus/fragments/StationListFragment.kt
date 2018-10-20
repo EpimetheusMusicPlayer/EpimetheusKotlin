@@ -76,6 +76,12 @@ class StationListFragment : Fragment() {
         })
 
         return inflater.inflate(R.layout.fragment_station_list, container, false).apply {
+            if (viewModel.getStationList().value == null) {
+                post {
+                    station_list_swipe_refresh_layout.isRefreshing = true
+                }
+            }
+
             recyclerview_station_list.apply {
                 addOnScrollListener(
                     RecyclerViewPreloader<String>(
@@ -118,10 +124,15 @@ class StationListFragment : Fragment() {
     override fun onStart() {
         super.onStart()
 
-        if (view?.station_list_swipe_refresh_layout?.isRefreshing == true || reloadOnShow) {
-            view?.recyclerview_station_list?.visibility = View.INVISIBLE
-            viewModel.loadStations()
-            reloadOnShow = false
+        view?.station_list_swipe_refresh_layout.apply {
+            if (this?.isRefreshing == true || reloadOnShow) {
+                view?.recyclerview_station_list?.visibility = View.INVISIBLE
+                this?.post {
+                    isRefreshing = true
+                }
+                viewModel.loadStations()
+                reloadOnShow = false
+            }
         }
     }
 
