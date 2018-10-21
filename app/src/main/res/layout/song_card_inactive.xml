@@ -33,11 +33,11 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:maxLines="1"
             android:paddingStart="10dp"
             android:paddingEnd="10dp"
             android:paddingBottom="3dp"
             android:scrollHorizontally="false"
+            android:singleLine="true"
             android:textStyle="bold"
             tools:text="Song name" />
 
@@ -46,10 +46,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:maxLines="1"
             android:paddingStart="10dp"
             android:paddingEnd="10dp"
             android:paddingBottom="3dp"
+            android:singleLine="true"
             tools:text="Song artist" />
 
 
@@ -58,10 +58,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:maxLines="1"
             android:paddingStart="10dp"
             android:paddingEnd="10dp"
             android:paddingBottom="3dp"
+            android:singleLine="true"
             android:textStyle="italic"
             tools:text="Song album" />
 
