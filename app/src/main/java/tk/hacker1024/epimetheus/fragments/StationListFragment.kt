@@ -227,12 +227,9 @@ class StationListFragment : Fragment() {
 
             card.setOnClickListener {
                 findNavController().navigate(
-                    R.id.openAndPlayStationPlaylist,
-                    bundleOf(
-                        "stations" to viewModel.getStationList().value,
-                        "stationIndex" to adapterPosition,
-                        "start" to true
-                    )
+                    StationListFragmentDirections.openAndPlayStationPlaylist()
+                        .setStationIndex(adapterPosition)
+                        .setStart(true)
                 )
             }
         }

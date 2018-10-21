@@ -41,9 +41,6 @@
             android:defaultValue="-1"
             app:argType="integer" />
         <argument
-            android:name="stations"
-            android:defaultValue="@null" />
-        <argument
             android:name="start"
             android:defaultValue="false"
             app:argType="boolean" />

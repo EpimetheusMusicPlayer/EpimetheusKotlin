@@ -70,7 +70,6 @@ class PlaylistFragment : Fragment() {
             findNavController().graph[R.id.playlistFragment].setDefaultArguments(
                 bundleOf(
                     "stationIndex" to arguments!!.getInt("stationIndex"),
-                    "stations" to null,
                     "start" to false
                 )
             )
@@ -80,7 +79,7 @@ class PlaylistFragment : Fragment() {
                 Intent(context, MusicService::class.java)
                     .putExtra("pandoraUserObject", viewModel.user.value!!)
                     .putExtra("stationIndex", arguments!!.getInt("stationIndex"))
-                    .putParcelableArrayListExtra("stations", arguments!!.getParcelableArrayList("stations"))
+                    .putParcelableArrayListExtra("stations", viewModel.getStationList().value!!)
             )
         }
     }
@@ -532,7 +531,7 @@ class PlaylistFragment : Fragment() {
                             holder.songCard.love_thumb.visibility = View.VISIBLE
                         }
                         holder.colorSong(
-                            holder.position == 0,
+                            position == 0,
                             if (holder.queueItemDescription.extras!!.containsKey("rating"))
                                 holder.queueItemDescription.extras!!.getBoolean("rating")
                             else null
