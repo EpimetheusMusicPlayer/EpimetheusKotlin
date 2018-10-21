@@ -235,22 +235,24 @@ class PlaylistFragment : Fragment() {
     @SuppressLint("ClickableViewAccessibility")
     private inner class ViewHolder(internal val songCard: LinearLayout) : RecyclerView.ViewHolder(songCard), View.OnCreateContextMenuListener {
         lateinit var queueItemDescription: MediaDescriptionCompat
-        private var colorCalculated = false
+        internal var colorCalculated = false
 
         internal fun colorDynamic() {
             Palette.Builder(queueItemDescription.iconBitmap!!).generate().apply {
-                getDarkVibrantColor(Color.DKGRAY).darken.also {
+                getDarkVibrantColor(Color.DKGRAY).darken.also { calcStatusBarColor ->
                     activity?.runOnUiThread {
                         viewModel.apply {
-                            appBarColor.value = getDarkVibrantColor(Color.DKGRAY)
-                            statusBarColor.value = it
-                            titleColor.value = getLightVibrantColor(Color.WHITE)
-                            subtitleColor.value = getLightMutedColor(Color.LTGRAY)
-
-                            songCard.setBackgroundColor(appBarColor.value!!)
-                            songCard.song_title.setTextColor(titleColor.value!!)
-                            songCard.song_artist.setTextColor(subtitleColor.value!!)
-                            songCard.song_album.setTextColor(subtitleColor.value!!)
+                            appBarColor.value = getDarkVibrantColor(Color.DKGRAY).also {
+                                songCard.setBackgroundColor(it)
+                            }
+                            statusBarColor.value = calcStatusBarColor
+                            titleColor.value = getLightVibrantColor(Color.WHITE).also {
+                                songCard.song_title.setTextColor(it)
+                            }
+                            subtitleColor.value = getLightMutedColor(Color.LTGRAY).also {
+                                songCard.song_artist.setTextColor(it)
+                                songCard.song_album.setTextColor(it)
+                            }
                         }
                     }
                 }
@@ -449,11 +451,12 @@ class PlaylistFragment : Fragment() {
             if (position < mediaController!!.queue.size) {
                 holder.queueItemDescription = mediaController!!.queue[position].description
 
-                if (holder.adapterPosition == 0) holder.songCard.play_song.visibility = View.GONE
+                if (position == 0) holder.songCard.play_song.visibility = View.GONE
 
                 // Set the colors
+                holder.colorCalculated = false
                 holder.colorSong(
-                    holder.adapterPosition == 0,
+                    position == 0,
                     if (holder.queueItemDescription.extras!!.containsKey("rating"))
                         holder.queueItemDescription.extras!!.getBoolean("rating")
                     else null
@@ -508,8 +511,9 @@ class PlaylistFragment : Fragment() {
                             .placeholder(holder.songCard.song_album_art.drawable)
                             .into(holder.songCard.song_album_art)
 
+                        holder.colorCalculated = false
                         holder.colorSong(
-                            holder.adapterPosition == 0,
+                            holder.position == 0,
                             if (holder.queueItemDescription.extras!!.containsKey("rating"))
                                 holder.queueItemDescription.extras!!.getBoolean("rating")
                             else null
@@ -533,7 +537,7 @@ class PlaylistFragment : Fragment() {
                             holder.songCard.love_thumb.visibility = View.VISIBLE
                         }
                         holder.colorSong(
-                            holder.adapterPosition == 0,
+                            holder.position == 0,
                             if (holder.queueItemDescription.extras!!.containsKey("rating"))
                                 holder.queueItemDescription.extras!!.getBoolean("rating")
                             else null

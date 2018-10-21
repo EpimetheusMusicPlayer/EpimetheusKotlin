@@ -163,7 +163,7 @@ class MediaControlFragment : Fragment() {
 
         @SuppressLint("SetTextI18n")
         override fun onMetadataChanged(metadata: MediaMetadataCompat) {
-            if (oldUri != metadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI)) {
+            if (oldUri != metadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI) && findNavController().currentDestination!!.id != R.id.playlistFragment) {
                 view?.let { view ->
                     view.playing_title?.text = metadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE)
                     view.playing_subtitle?.text = "${metadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST)} (${metadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM)})"
