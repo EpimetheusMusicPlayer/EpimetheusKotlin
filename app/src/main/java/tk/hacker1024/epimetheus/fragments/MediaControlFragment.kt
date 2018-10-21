@@ -163,7 +163,7 @@ class MediaControlFragment : Fragment() {
 
         @SuppressLint("SetTextI18n")
         override fun onMetadataChanged(metadata: MediaMetadataCompat) {
-            if (oldUri != metadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI) && findNavController().currentDestination!!.id != R.id.playlistFragment) {
+            if (oldUri != metadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI)) {
                 view?.let { view ->
                     view.playing_title?.text = metadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE)
                     view.playing_subtitle?.text = "${metadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST)} (${metadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM)})"
@@ -177,16 +177,18 @@ class MediaControlFragment : Fragment() {
                         .into(view.playing_art)
                     oldUri = metadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI)
 
-                    GlobalScope.launch {
-                        Palette.Builder(metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART))
-                            .generate().apply {
-                                viewModel.apply {
-                                    appBarColor.postValue(getDarkVibrantColor(Color.DKGRAY))
-                                    statusBarColor.postValue(getDarkVibrantColor(Color.DKGRAY).darken)
-                                    titleColor.postValue(getLightVibrantColor(Color.WHITE))
-                                    subtitleColor.postValue(getLightMutedColor(Color.LTGRAY))
+                    if (findNavController().currentDestination!!.id != R.id.playlistFragment) {
+                        GlobalScope.launch {
+                            Palette.Builder(metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART))
+                                .generate().apply {
+                                    viewModel.apply {
+                                        appBarColor.postValue(getDarkVibrantColor(Color.DKGRAY))
+                                        statusBarColor.postValue(getDarkVibrantColor(Color.DKGRAY).darken)
+                                        titleColor.postValue(getLightVibrantColor(Color.WHITE))
+                                        subtitleColor.postValue(getLightMutedColor(Color.LTGRAY))
+                                    }
                                 }
-                            }
+                        }
                     }
                 }
             }
