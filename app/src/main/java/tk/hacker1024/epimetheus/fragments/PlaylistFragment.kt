@@ -221,21 +221,23 @@ class PlaylistFragment : Fragment() {
 
         val handler = Handler()
         val updateProgress = object : Runnable {
+            val position; get() = mediaController!!.playbackState?.position ?: 0L
+            val positionString; get() =
+                if (duration <= 0L) "--" else (position).run {
+                    (if (this < 0L) 0 else this / 1000).run {
+                        "${this / 60}:${String.format("%02d", this % 60)}"
+                    }
+                }
+
+            val duration; get() = mediaController!!.metadata?.getLong(MediaMetadataCompat.METADATA_KEY_DURATION) ?: 0L
+            val durationString; get() =
+                if (duration <= 0L) "--" else (duration / 1000).run {
+                    "${this / 60}:${String.format("%02d", this % 60)}"
+                }
+
             @SuppressLint("SetTextI18n")
             override fun run() {
                 if (mediaController != null) {
-                    val duration =
-                        mediaController?.metadata?.getLong(MediaMetadataCompat.METADATA_KEY_DURATION) ?: 0
-
-                    val positionString = if (duration <= 0L) "--" else (mediaController?.playbackState?.position ?: 0L).run {
-                        (if (this < 0L) 0 else this / 1000).run {
-                            "${this / 60}:${String.format("%02d", this % 60)}"
-                        }
-                    }
-                    val durationString = if (duration <= 0L) "--" else (duration / 1000).run {
-                        "${this / 60}:${String.format("%02d", this % 60)}"
-                    }
-
                     (view?.song_list?.findViewHolderForAdapterPosition(0) as? ViewHolder)
                         ?.songCard?.progress?.text = "$positionString / $durationString"
                     handler.postDelayed(this, 200)
@@ -526,7 +528,7 @@ class PlaylistFragment : Fragment() {
 
                         holder.colorCalculated = false
                         holder.colorSong(
-                            holder.position == 0,
+                            position == 0,
                             if (holder.queueItemDescription.extras!!.containsKey("rating"))
                                 holder.queueItemDescription.extras!!.getBoolean("rating")
                             else null

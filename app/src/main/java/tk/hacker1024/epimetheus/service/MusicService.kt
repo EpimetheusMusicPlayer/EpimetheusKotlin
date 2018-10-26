@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.media.MediaMetadata
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -406,7 +405,7 @@ internal class MusicService : MediaBrowserServiceCompat() {
                     updateNotification()
 
                     mediaSession.setMetadata(
-                        MediaMetadataCompat.Builder()
+                        (if (mediaSession.controller.metadata == null) MediaMetadataCompat.Builder() else MediaMetadataCompat.Builder(mediaSession.controller.metadata))
                             .putString(
                                 MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE,
                                 playlist[0].song.name
@@ -618,11 +617,6 @@ internal class MusicService : MediaBrowserServiceCompat() {
         override fun onPositionDiscontinuity(reason: Int) {
             if (reason == Player.DISCONTINUITY_REASON_PERIOD_TRANSITION) {
                 newSong(true)
-                mediaSession.setMetadata(
-                    MediaMetadataCompat.Builder(mediaSession.controller.metadata)
-                        .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, mediaPlayer.duration)
-                        .build()
-                )
             }
         }
 
@@ -632,27 +626,13 @@ internal class MusicService : MediaBrowserServiceCompat() {
 
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
             when (playbackState) {
-                Player.STATE_BUFFERING -> playbackStateBuilder.setState(
-                    PlaybackStateCompat.STATE_BUFFERING,
-                    mediaPlayer.currentPosition,
-                    1f
-                )
-
-                Player.STATE_READY -> {
-                    playbackStateBuilder.setState(
-                        if (mediaPlayer.playWhenReady) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
-                        mediaPlayer.currentPosition,
-                        mediaPlayer.playbackParameters.speed
-                    )
-
+                Player.STATE_IDLE -> {
                     mediaSession.setMetadata(
-                        MediaMetadataCompat.Builder(mediaSession.controller.metadata)
+                        (if (mediaSession.controller.metadata == null) MediaMetadataCompat.Builder() else MediaMetadataCompat.Builder(mediaSession.controller.metadata))
                             .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, mediaPlayer.duration)
                             .build()
                     )
-                }
 
-                Player.STATE_IDLE -> {
                     playbackStateBuilder.setState(
                         PlaybackStateCompat.STATE_NONE,
                         mediaPlayer.currentPosition,
@@ -660,7 +640,41 @@ internal class MusicService : MediaBrowserServiceCompat() {
                     )
                 }
 
+                Player.STATE_BUFFERING -> {
+                    mediaSession.setMetadata(
+                        (if (mediaSession.controller.metadata == null) MediaMetadataCompat.Builder() else MediaMetadataCompat.Builder(mediaSession.controller.metadata))
+                            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, mediaPlayer.duration)
+                            .build()
+                    )
+
+                    playbackStateBuilder.setState(
+                        PlaybackStateCompat.STATE_BUFFERING,
+                        mediaPlayer.currentPosition,
+                        1f
+                    )
+                }
+
+                Player.STATE_READY -> {
+                    mediaSession.setMetadata(
+                        (if (mediaSession.controller.metadata == null) MediaMetadataCompat.Builder() else MediaMetadataCompat.Builder(mediaSession.controller.metadata))
+                            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, mediaPlayer.duration)
+                            .build()
+                    )
+
+                    playbackStateBuilder.setState(
+                        if (mediaPlayer.playWhenReady) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
+                        mediaPlayer.currentPosition,
+                        mediaPlayer.playbackParameters.speed
+                    )
+                }
+
                 Player.STATE_ENDED -> {
+                    mediaSession.setMetadata(
+                        (if (mediaSession.controller.metadata == null) MediaMetadataCompat.Builder() else MediaMetadataCompat.Builder(mediaSession.controller.metadata))
+                            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, mediaPlayer.duration)
+                            .build()
+                    )
+
                     playbackStateBuilder.setState(
                         PlaybackStateCompat.STATE_NONE,
                         mediaPlayer.currentPosition,
