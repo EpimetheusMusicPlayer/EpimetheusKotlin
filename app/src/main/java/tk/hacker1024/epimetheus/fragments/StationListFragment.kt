@@ -223,6 +223,15 @@ class StationListFragment : Fragment() {
                 } else {
                     menu.removeItem(R.id.delete_station)
                 }
+
+                menu.findItem(R.id.feedback).setOnMenuItemClickListener {
+                    findNavController().navigate(
+                        StationListFragmentDirections.actionStationListFragmentToFeedbackFragment(
+                            adapterPosition
+                        )
+                    )
+                    true
+                }
             }
 
             card.setOnClickListener {

@@ -51,6 +51,8 @@ class PlaylistFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        setHasOptionsMenu(true)
+
         viewModel = ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java]
 
         requireContext().obtainStyledAttributes(
@@ -140,6 +142,23 @@ class PlaylistFragment : Fragment() {
         mediaController?.unregisterCallback(controllerCallback)
         mediaController = null
     }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.playlist_menu, menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem) =
+        when (item.itemId) {
+            R.id.feedback -> {
+                findNavController().navigate(
+                    PlaylistFragmentDirections.actionPlaylistFragmentToFeedbackFragment(
+                        PlaylistFragmentArgs.fromBundle(arguments).stationIndex
+                    )
+                )
+                true
+            }
+            else -> false
+        }
 
     private val controllerCallback = object : MediaControllerCompat.Callback() {
         private var oldQueue: List<MediaSessionCompat.QueueItem> = emptyList()

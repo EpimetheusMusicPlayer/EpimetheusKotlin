@@ -23,20 +23,33 @@ fun showLocationErrorDialog(
         .show()!!
 }
 
+private var isNetworkDialogShowing = false
 fun showNetworkErrorDialog(
     context: Context,
     ok: (dialog: DialogInterface, which: Int) -> Unit = { dialog: DialogInterface, _: Int -> dialog.dismiss() },
     exit: (dialog: DialogInterface, which: Int) -> Unit,
     onClose: (dialog: DialogInterface) -> Unit = {}
 ) {
-    AlertDialog.Builder(context)
-        .setTitle(R.string.dialog_network_label)
-        .setMessage(R.string.dialog_network_message)
-        .setPositiveButton(R.string.dialog_default_ok, ok)
-        .setNegativeButton(R.string.dialog_default_exit, exit)
-        .setOnDismissListener(onClose)
-        .setOnCancelListener(onClose)
-        .show()!!
+    if (!isNetworkDialogShowing) {
+        AlertDialog.Builder(context)
+            .setTitle(R.string.dialog_network_label)
+            .setMessage(R.string.dialog_network_message)
+            .setPositiveButton(R.string.dialog_default_ok, ok)
+            .setNegativeButton(R.string.dialog_default_exit) { dialog, which ->
+                exit(dialog, which)
+                isNetworkDialogShowing = false
+            }
+            .setOnDismissListener {
+                onClose(it)
+                isNetworkDialogShowing = false
+            }
+            .setOnCancelListener {
+                onClose(it)
+                isNetworkDialogShowing = false
+            }
+            .show()!!
+        isNetworkDialogShowing = true
+    }
 }
 
 fun showPandoraErrorDialog(

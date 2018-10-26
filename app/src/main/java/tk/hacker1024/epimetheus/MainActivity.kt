@@ -189,7 +189,11 @@ class MainActivity : AppCompatActivity() {
     internal fun connectMediaBrowser(runOnConnect: (() -> Unit)? = null) {
         if (!mediaBrowser.isConnected) {
             connectionCallback.runOnConnect = runOnConnect
-            mediaBrowser.connect()
+            try {
+                mediaBrowser.connect()
+            } catch (e: IllegalStateException) {
+                runOnConnect?.invoke()
+            }
         } else {
             runOnConnect?.invoke()
         }
@@ -229,8 +233,11 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 MusicServiceResults.REQUEST_STOP_MUSIC -> {
-                    if (findNavController(R.id.nav_host_fragment).currentDestination!!.id == R.id.playlistFragment) {
-                        findNavController(R.id.nav_host_fragment).navigateUp()
+                    findNavController(R.id.nav_host_fragment).apply {
+                        when (currentDestination!!.id) {
+                            R.id.playlistFragment -> navigateUp()
+                            R.id.feedbackFragment -> popBackStack(R.id.stationListFragment, false)
+                        }
                     }
                 }
 

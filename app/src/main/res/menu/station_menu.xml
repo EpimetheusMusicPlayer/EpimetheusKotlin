@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
+        android:id="@+id/feedback"
+        android:icon="@drawable/ic_thumbs_up_down_white_24dp"
+        android:title="@string/fragment_label_feedback" />
+    <item
         android:id="@+id/rename_station"
         android:icon="@drawable/ic_edit_black_24dp"
         android:title="Rename station" />
