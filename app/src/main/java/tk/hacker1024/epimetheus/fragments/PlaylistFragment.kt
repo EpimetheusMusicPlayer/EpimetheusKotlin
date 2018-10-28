@@ -25,12 +25,12 @@ import androidx.navigation.get
 import androidx.palette.graphics.Palette
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.fragment_playlist.*
 import kotlinx.android.synthetic.main.fragment_playlist.view.*
 import kotlinx.android.synthetic.main.song_card_inactive.view.*
 import kotlinx.coroutines.GlobalScope
@@ -43,10 +43,17 @@ private const val ALBUM_ART_CORNER_RADIUS = 24
 class PlaylistFragment : Fragment() {
     internal lateinit var viewModel: EpimetheusViewModel
     private var mediaController: MediaControllerCompat? = null
-    private var cachedSize = 0
 
     @ColorInt private var textColorActive: Int = 0xFF_FF_FF_FF.toInt()
     @ColorInt private var textColorInactive: Int = 0x8A_00_00_00.toInt()
+    private val colorPrimary by lazy {
+        @ColorInt if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            resources.getColor(R.color.colorPrimary, null)
+        } else {
+            @Suppress("DEPRECATION")
+            resources.getColor(R.color.colorPrimary)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -161,10 +168,7 @@ class PlaylistFragment : Fragment() {
         }
 
     private val controllerCallback = object : MediaControllerCompat.Callback() {
-        private var oldQueue: List<MediaSessionCompat.QueueItem> = emptyList()
-
         override fun onQueueChanged(queue: MutableList<MediaSessionCompat.QueueItem>) {
-            if (mediaController?.extras?.getInt("stationIndex") == arguments!!.getInt("stationIndex")) cachedSize = queue.size
             if (queue.isEmpty() || mediaController?.extras?.getInt("stationIndex") != arguments!!.getInt("stationIndex")) {
                 view?.song_list?.visibility = View.GONE
                 view?.loading_widget?.visibility = View.VISIBLE
@@ -172,49 +176,30 @@ class PlaylistFragment : Fragment() {
                 view?.loading_widget?.visibility = View.GONE
                 view?.song_list?.visibility = View.VISIBLE
             }
-            DiffUtil.calculateDiff(
-                object : DiffUtil.Callback() {
-                    override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int) =
-                        oldQueue[oldItemPosition].description.iconUri == queue[newItemPosition].description.iconUri &&
-                        oldQueue[oldItemPosition].description.extras!!.containsKey("rating") == queue[newItemPosition].description.extras!!.containsKey("rating") &&
-                        oldQueue[oldItemPosition].description.extras!!.containsKey("settingFeedback") == queue[newItemPosition].description.extras!!.containsKey("settingFeedback") &&
-                        oldQueue[oldItemPosition].description.extras!!.getBoolean("rating") == queue[newItemPosition].description.extras!!.getBoolean("rating") &&
-                        oldQueue[oldItemPosition].description.extras!!.getBoolean("settingFeedback") == queue[newItemPosition].description.extras!!.getBoolean("settingFeedback")
 
-                    override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int) =
-                        oldQueue[oldItemPosition].description.title == queue[newItemPosition].description.title &&
-                        oldQueue[oldItemPosition].description.description == queue[newItemPosition].description.description &&
-                        oldQueue[oldItemPosition].description.subtitle == queue[newItemPosition].description.subtitle
-
-                    override fun getChangePayload(oldItemPosition: Int, newItemPosition: Int): Map<String, Boolean> {
-                        return mapOf(
-                            "art" to (oldQueue[oldItemPosition].description?.iconUri != queue[newItemPosition].description.iconUri),
-                            "rating" to (
-                                oldQueue[oldItemPosition].description.extras!!.containsKey("rating") != queue[newItemPosition].description.extras!!.containsKey("rating") ||
-                                oldQueue[oldItemPosition].description.extras!!.containsKey("settingFeedback") != queue[newItemPosition].description.extras!!.containsKey("settingFeedback") ||
-                                oldQueue[oldItemPosition].description.extras!!.getBoolean("rating") != queue[newItemPosition].description.extras!!.getBoolean("rating") ||
-                                oldQueue[oldItemPosition].description.extras!!.getBoolean("settingFeedback") != queue[newItemPosition].description.extras!!.getBoolean("settingFeedback")
+            view?.song_list?.apply {
+                @Suppress("UNCHECKED_CAST")
+                (adapter as ListAdapter<MediaSessionCompat.QueueItem, *>).apply {
+                    if (itemCount == queue.size + 1) {
+                        (findViewHolderForAdapterPosition(1) as ViewHolder?)?.apply {
+                            colorSong(
+                                true,
+                                if (queueItemDescription.extras!!.containsKey("rating"))
+                                    queueItemDescription.extras!!.getBoolean("rating")
+                                else null
                             )
-                        )
+                        }
+                    } else {
+                        (findViewHolderForAdapterPosition(0) as ViewHolder?)?.apply {
+                            colorSong(
+                                true,
+                                if (queueItemDescription.extras!!.containsKey("rating"))
+                                    queueItemDescription.extras!!.getBoolean("rating")
+                                else null
+                            )
+                        }
                     }
-
-                    override fun getOldListSize() = oldQueue.size
-
-                    override fun getNewListSize() = cachedSize
-                },
-                false
-            ).apply {
-                view?.song_list?.adapter.also {
-                    if (it != null) dispatchUpdatesTo(it)
-                    oldQueue = queue
-                    (song_list.findViewHolderForAdapterPosition(0) as ViewHolder?)?.apply {
-                        colorSong(
-                            true,
-                            if (queueItemDescription.extras!!.containsKey("rating"))
-                                queueItemDescription.extras!!.getBoolean("rating")
-                            else null
-                        )
-                    }
+                    submitList(queue)
                 }
             }
         }
@@ -239,7 +224,7 @@ class PlaylistFragment : Fragment() {
             override fun run() {
                 if (mediaController != null) {
                     (view?.song_list?.findViewHolderForAdapterPosition(0) as? ViewHolder)
-                        ?.songCard?.progress?.text = "$positionString / $durationString"
+                        ?.mProgress?.text = "$positionString / $durationString"
                     handler.postDelayed(this, 200)
                 }
             }
@@ -248,9 +233,20 @@ class PlaylistFragment : Fragment() {
 
     var menu: Menu? = null
     @SuppressLint("ClickableViewAccessibility")
-    private inner class ViewHolder(internal val songCard: LinearLayout) : RecyclerView.ViewHolder(songCard), View.OnCreateContextMenuListener {
-        lateinit var queueItemDescription: MediaDescriptionCompat
+    private inner class ViewHolder(private val songCard: LinearLayout) : RecyclerView.ViewHolder(songCard), View.OnCreateContextMenuListener {
+        internal val mSongAlbumArt = songCard.song_album_art
+        internal val mSongTitle    = songCard.song_title
+        internal val mSongArtist   = songCard.song_artist
+        internal val mSongAlbum    = songCard.song_album
+        internal val mBanProgress  = songCard.ban_progress
+        internal val mLoveProgress = songCard.love_progress
+        internal val mBanThumb     = songCard.ban_thumb
+        internal val mLoveThumb    = songCard.love_thumb
+        internal val mPlaySong     = songCard.play_song
+        internal val mProgress     = songCard.progress
+
         internal var colorCalculated = false
+        internal lateinit var queueItemDescription: MediaDescriptionCompat
 
         internal fun colorDynamic() {
             Palette.Builder(queueItemDescription.iconBitmap!!).generate().apply {
@@ -262,11 +258,11 @@ class PlaylistFragment : Fragment() {
                             }
                             statusBarColor.value = calcStatusBarColor
                             titleColor.value = getLightVibrantColor(Color.WHITE).also {
-                                songCard.song_title.setTextColor(it)
+                                mSongTitle.setTextColor(it)
                             }
                             subtitleColor.value = getLightMutedColor(Color.LTGRAY).also {
-                                songCard.song_artist.setTextColor(it)
-                                songCard.song_album.setTextColor(it)
+                                mSongArtist.setTextColor(it)
+                                mSongAlbum.setTextColor(it)
                             }
                         }
                     }
@@ -279,51 +275,37 @@ class PlaylistFragment : Fragment() {
             if (active) {
                 if (!colorCalculated) {
                     songCard.setBackgroundColor(textColorInactive)
-                    songCard.song_title.setTextColor(textColorActive)
-                    songCard.song_artist.setTextColor(textColorActive)
-                    songCard.song_album.setTextColor(textColorActive)
+                    mSongTitle.setTextColor(textColorActive)
+                    mSongArtist.setTextColor(textColorActive)
+                    mSongAlbum.setTextColor(textColorActive)
                     GlobalScope.launch {
                         colorDynamic()
                     }
                     colorCalculated = true
                 }
-                songCard.ban_progress.indeterminateDrawable.setTint(textColorActive)
-                songCard.love_progress.indeterminateDrawable.setTint(textColorActive)
-                songCard.ban_thumb.setColorFilter(
+                mBanProgress.indeterminateDrawable.setTint(textColorActive)
+                mLoveProgress.indeterminateDrawable.setTint(textColorActive)
+                mBanThumb.setColorFilter(
                     if (rating == false) 0xFF_FF_FF_00.toInt() else textColorActive
                 )
-                songCard.love_thumb.setColorFilter(
+                mLoveThumb.setColorFilter(
                     if (rating == true) 0xFF_FF_FF_00.toInt() else textColorActive
                 )
-                songCard.play_song.visibility = View.GONE
-                songCard.progress.visibility = View.VISIBLE
+                mPlaySong.visibility = View.GONE
+                mProgress.visibility = View.VISIBLE
             } else {
                 colorCalculated = false
                 songCard.setBackgroundColor(Color.TRANSPARENT)
-                songCard.song_title.setTextColor(textColorInactive)
-                songCard.song_artist.setTextColor(textColorInactive)
-                songCard.song_album.setTextColor(textColorInactive)
-                songCard.ban_progress.indeterminateDrawable.setTint(textColorInactive)
-                songCard.love_progress.indeterminateDrawable.setTint(textColorInactive)
-                songCard.ban_thumb.setColorFilter(
-                    if (rating == false) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                            resources.getColor(R.color.colorPrimary, null)
-                        else resources.getColor(R.color.colorPrimary)
-                    }
-                    else textColorInactive
-                )
-                songCard.love_thumb.setColorFilter(
-                    if (rating == true) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                            resources.getColor(R.color.colorPrimary, null)
-                        else resources.getColor(R.color.colorPrimary)
-                    }
-                    else textColorInactive
-                )
-                songCard.play_song.setColorFilter(textColorInactive)
-                songCard.progress.visibility = View.GONE
-                songCard.play_song.visibility = View.VISIBLE
+                mSongTitle.setTextColor(textColorInactive)
+                mSongArtist.setTextColor(textColorInactive)
+                mSongAlbum.setTextColor(textColorInactive)
+                mBanProgress.indeterminateDrawable.setTint(textColorInactive)
+                mLoveProgress.indeterminateDrawable.setTint(textColorInactive)
+                mBanThumb.setColorFilter(if (rating == false) colorPrimary else textColorInactive)
+                mLoveThumb.setColorFilter(if (rating == true) colorPrimary else textColorInactive)
+                mPlaySong.setColorFilter(textColorInactive)
+                mProgress.visibility = View.GONE
+                mPlaySong.visibility = View.VISIBLE
             }
         }
 
@@ -337,13 +319,13 @@ class PlaylistFragment : Fragment() {
                 }
             }
 
-            songCard.play_song.setOnClickListener {
+            mPlaySong.setOnClickListener {
                 menuPlay()
             }
 
-            songCard.ban_thumb.setOnClickListener {
+            mBanThumb.setOnClickListener {
                 it.visibility = View.GONE
-                songCard.ban_progress.visibility = View.VISIBLE
+                mBanProgress.visibility = View.VISIBLE
                 if (queueItemDescription.extras!!.containsKey("rating") && !queueItemDescription.extras!!.getBoolean("rating")) {
                     mediaController!!.transportControls!!.setRating(
                         RatingCompat.newUnratedRating(RatingCompat.RATING_THUMB_UP_DOWN),
@@ -361,9 +343,9 @@ class PlaylistFragment : Fragment() {
                 }
             }
 
-            songCard.love_thumb.setOnClickListener {
+            mLoveThumb.setOnClickListener {
                 it.visibility = View.GONE
-                songCard.love_progress.visibility = View.VISIBLE
+                mLoveProgress.visibility = View.VISIBLE
                 if (queueItemDescription.extras!!.containsKey("rating") && queueItemDescription.extras!!.getBoolean("rating")) {
                     mediaController!!.transportControls!!.setRating(
                         RatingCompat.newUnratedRating(RatingCompat.RATING_THUMB_UP_DOWN),
@@ -384,7 +366,7 @@ class PlaylistFragment : Fragment() {
 
         override fun onCreateContextMenu(menu: ContextMenu, v: View, menuInfo: ContextMenu.ContextMenuInfo?) {
             requireActivity().menuInflater.inflate(R.menu.song_menu, menu)
-            menu.setHeaderTitle(songCard.song_title.text)
+            menu.setHeaderTitle(mSongTitle.text)
             if (adapterPosition == 0) {
                 menu.removeItem(R.id.play)
             } else {
@@ -451,7 +433,8 @@ class PlaylistFragment : Fragment() {
             )
         }
     }
-    private inner class SongRecyclerAdapter : RecyclerView.Adapter<ViewHolder>() {
+
+    private inner class SongRecyclerAdapter : ListAdapter<MediaSessionCompat.QueueItem, ViewHolder>(ItemCallback()) {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
             ViewHolder(
                 LayoutInflater.from(parent.context)
@@ -463,10 +446,10 @@ class PlaylistFragment : Fragment() {
             )
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            if (position < mediaController!!.queue.size) {
-                holder.queueItemDescription = mediaController!!.queue[position].description
+            if (position < itemCount) {
+                holder.queueItemDescription = getItem(position).description
 
-                if (position == 0) holder.songCard.play_song.visibility = View.GONE
+                if (position == 0) holder.mPlaySong.visibility = View.GONE
 
                 // Set the colors
                 holder.colorCalculated = false
@@ -478,10 +461,10 @@ class PlaylistFragment : Fragment() {
                 )
 
                 // Bind the song title, artist, and album
-                holder.songCard.song_title.text = holder.queueItemDescription.title
-                holder.songCard.song_artist.text = holder.queueItemDescription.subtitle
-                holder.songCard.song_album.text = holder.queueItemDescription.description
-                holder.songCard.progress.text = "-- / --"
+                holder.mSongTitle.text = holder.queueItemDescription.title
+                holder.mSongArtist.text = holder.queueItemDescription.subtitle
+                holder.mSongAlbum.text = holder.queueItemDescription.description
+                holder.mProgress.text = "-- / --"
 
                 GlideApp
                     .with(this@PlaylistFragment)
@@ -489,31 +472,31 @@ class PlaylistFragment : Fragment() {
                     .load(holder.queueItemDescription.iconBitmap)
                     .diskCacheStrategy(DiskCacheStrategy.NONE)
                     .transform(RoundedCorners(ALBUM_ART_CORNER_RADIUS))
-                    .into(holder.songCard.song_album_art)
+                    .into(holder.mSongAlbumArt)
 
                 // Bind the rating progress
                 if (holder.queueItemDescription.extras!!.containsKey("settingFeedback")) {
                     (holder.queueItemDescription.extras!!.getBoolean("settingFeedback")).apply {
                         if (this) {
-                            holder.songCard.love_thumb.visibility = View.GONE
-                            holder.songCard.love_progress.visibility = View.VISIBLE
+                            holder.mLoveThumb.visibility = View.GONE
+                            holder.mLoveProgress.visibility = View.VISIBLE
                         } else {
-                            holder.songCard.ban_thumb.visibility = View.GONE
-                            holder.songCard.ban_progress.visibility = View.VISIBLE
+                            holder.mBanThumb.visibility = View.GONE
+                            holder.mBanProgress.visibility = View.VISIBLE
                         }
                     }
                 } else {
-                    holder.songCard.ban_progress.visibility = View.GONE
-                    holder.songCard.love_progress.visibility = View.GONE
-                    holder.songCard.ban_thumb.visibility = View.VISIBLE
-                    holder.songCard.love_thumb.visibility = View.VISIBLE
+                    holder.mBanProgress.visibility = View.GONE
+                    holder.mLoveProgress.visibility = View.GONE
+                    holder.mBanThumb.visibility = View.VISIBLE
+                    holder.mLoveThumb.visibility = View.VISIBLE
                 }
             }
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: List<Any>) {
-            if (payloads.isNotEmpty() && position < mediaController!!.queue.size) {
-                holder.queueItemDescription = mediaController!!.queue[position].description
+            if (payloads.isNotEmpty() && position < itemCount) {
+                holder.queueItemDescription = getItem(position).description
                 @Suppress("UNCHECKED_CAST")
                 (payloads[0] as Map<String, Boolean>).apply {
                     if (get("art") == true) {
@@ -523,8 +506,8 @@ class PlaylistFragment : Fragment() {
                             .diskCacheStrategy(DiskCacheStrategy.NONE)
                             .transition(DrawableTransitionOptions.withCrossFade())
                             .transform(RoundedCorners(ALBUM_ART_CORNER_RADIUS))
-                            .placeholder(holder.songCard.song_album_art.drawable)
-                            .into(holder.songCard.song_album_art)
+                            .placeholder(holder.mSongAlbumArt.drawable)
+                            .into(holder.mSongAlbumArt)
 
                         holder.colorCalculated = false
                         holder.colorSong(
@@ -538,18 +521,18 @@ class PlaylistFragment : Fragment() {
                         if (holder.queueItemDescription.extras!!.containsKey("settingFeedback")) {
                             (holder.queueItemDescription.extras!!.getBoolean("settingFeedback")).apply {
                                 if (this) {
-                                    holder.songCard.love_thumb.visibility = View.GONE
-                                    holder.songCard.love_progress.visibility = View.VISIBLE
+                                    holder.mLoveThumb.visibility = View.GONE
+                                    holder.mLoveProgress.visibility = View.VISIBLE
                                 } else {
-                                    holder.songCard.ban_thumb.visibility = View.GONE
-                                    holder.songCard.ban_progress.visibility = View.VISIBLE
+                                    holder.mBanThumb.visibility = View.GONE
+                                    holder.mBanProgress.visibility = View.VISIBLE
                                 }
                             }
                         } else {
-                            holder.songCard.ban_progress.visibility = View.GONE
-                            holder.songCard.love_progress.visibility = View.GONE
-                            holder.songCard.ban_thumb.visibility = View.VISIBLE
-                            holder.songCard.love_thumb.visibility = View.VISIBLE
+                            holder.mBanProgress.visibility = View.GONE
+                            holder.mLoveProgress.visibility = View.GONE
+                            holder.mBanThumb.visibility = View.VISIBLE
+                            holder.mLoveThumb.visibility = View.VISIBLE
                         }
                         holder.colorSong(
                             position == 0,
@@ -571,7 +554,30 @@ class PlaylistFragment : Fragment() {
         override fun onViewRecycled(holder: ViewHolder) {
             menu?.close()
         }
+    }
 
-        override fun getItemCount() = cachedSize
+    private class ItemCallback : DiffUtil.ItemCallback<MediaSessionCompat.QueueItem>() {
+        override fun areItemsTheSame(oldItem: MediaSessionCompat.QueueItem, newItem: MediaSessionCompat.QueueItem) =
+            oldItem.description.title == newItem.description.title &&
+            oldItem.description.description == newItem.description.description &&
+            oldItem.description.subtitle == newItem.description.subtitle
+
+        override fun areContentsTheSame(oldItem: MediaSessionCompat.QueueItem, newItem: MediaSessionCompat.QueueItem) =
+            oldItem.description.iconUri == newItem.description.iconUri &&
+            oldItem.description.extras!!.containsKey("rating") == newItem.description.extras!!.containsKey("rating") &&
+            oldItem.description.extras!!.containsKey("settingFeedback") == newItem.description.extras!!.containsKey("settingFeedback") &&
+            oldItem.description.extras!!.getBoolean("rating") == newItem.description.extras!!.getBoolean("rating") &&
+            oldItem.description.extras!!.getBoolean("settingFeedback") == newItem.description.extras!!.getBoolean("settingFeedback")
+
+        override fun getChangePayload(oldItem: MediaSessionCompat.QueueItem, newItem: MediaSessionCompat.QueueItem) =
+            mapOf(
+                "art" to (oldItem.description?.iconUri != newItem.description.iconUri),
+                "rating" to (
+                        oldItem.description.extras!!.containsKey("rating") != newItem.description.extras!!.containsKey("rating") ||
+                        oldItem.description.extras!!.containsKey("settingFeedback") != newItem.description.extras!!.containsKey("settingFeedback") ||
+                        oldItem.description.extras!!.getBoolean("rating") != newItem.description.extras!!.getBoolean("rating") ||
+                        oldItem.description.extras!!.getBoolean("settingFeedback") != newItem.description.extras!!.getBoolean("settingFeedback")
+                        )
+            )
     }
 }
