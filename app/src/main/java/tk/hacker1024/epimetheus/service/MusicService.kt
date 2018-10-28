@@ -312,6 +312,18 @@ internal class MusicService : MediaBrowserServiceCompat() {
         stop()
     }
 
+    override fun onDestroy() {
+        mediaPlayerHandler.post {
+            mediaSession.isActive = false
+            mediaPlayer.playWhenReady = false
+            mediaSession.release()
+            mediaPlayer.release()
+        }
+        stopForeground(true)
+        stopSelf()
+        super.onDestroy()
+    }
+
     override fun onGetRoot(clientPackageName: String, clientUid: Int, rootHints: Bundle?) =
         BrowserRoot("@stations/", null)
 

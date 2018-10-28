@@ -288,6 +288,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun logout() {
+        stopService(Intent(this, MusicService::class.java))
         getSharedPreferences(AUTH_SHARED_PREFS_NAME, MODE_PRIVATE).edit().clear().apply()
         finish()
         startActivity(
