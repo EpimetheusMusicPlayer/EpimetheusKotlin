@@ -783,21 +783,23 @@ internal class MusicService : MediaBrowserServiceCompat() {
         // Loads more songs
         internal fun loadSongs() {
             try {
-                station.getPlaylist(user).also { newSongs ->
-                    val newMediaSources = List<MediaSource>(newSongs.size) {
-                        extractorMediaSourceFactory.createMediaSource(newSongs[it].audioUri)
-                    }
+                station.getPlaylist(user)
+                    .filterNot { it.trackType == Song.TrackType.ARTIST_MESSAGE }
+                    .also { newSongs ->
+                        val newMediaSources = List<MediaSource>(newSongs.size) {
+                            extractorMediaSourceFactory.createMediaSource(newSongs[it].audioUri)
+                        }
 
-                    for (song in newSongs) {
-                        add(SongBitmapHolder(song))
-                    }
-                    mediaSource.addMediaSources(newMediaSources)
+                        for (song in newSongs) {
+                            add(SongBitmapHolder(song))
+                        }
+                        mediaSource.addMediaSources(newMediaSources)
 
-                    // Download the album art in a background thread, and update the notification
-                    for (i in 0 until newSongs.size) {
-                        loadBitmapIfNeeded(size - newSongs.size + i)
+                        // Download the album art in a background thread, and update the notification
+                        for (i in 0 until newSongs.size) {
+                            loadBitmapIfNeeded(size - newSongs.size + i)
+                        }
                     }
-                }
             } catch (e: IOException) {
                 stop(MusicServiceResults.ERROR_NETWORK)
             } catch (e: PandoraException) {
