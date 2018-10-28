@@ -224,13 +224,17 @@ class StationListFragment : Fragment() {
                     menu.removeItem(R.id.delete_station)
                 }
 
-                menu.findItem(R.id.feedback).setOnMenuItemClickListener {
-                    findNavController().navigate(
-                        StationListFragmentDirections.actionStationListFragmentToFeedbackFragment(
-                            adapterPosition
+                if (!station.isShuffle) {
+                    menu.findItem(R.id.feedback).setOnMenuItemClickListener {
+                        findNavController().navigate(
+                            StationListFragmentDirections.actionStationListFragmentToFeedbackFragment(
+                                adapterPosition
+                            )
                         )
-                    )
-                    true
+                        true
+                    }
+                } else {
+                    menu.removeItem(R.id.feedback)
                 }
             }
 

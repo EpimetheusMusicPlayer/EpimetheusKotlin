@@ -58,9 +58,11 @@ class PlaylistFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setHasOptionsMenu(true)
-
         viewModel = ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java]
+
+        if (!viewModel.getStationList().value!![arguments!!.getInt("stationIndex")].isShuffle) {
+            setHasOptionsMenu(true)
+        }
 
         requireContext().obtainStyledAttributes(
             intArrayOf(
