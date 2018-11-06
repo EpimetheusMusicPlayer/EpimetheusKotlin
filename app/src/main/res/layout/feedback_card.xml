@@ -85,7 +85,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:background="?android:attr/selectableItemBackground"
-        android:contentDescription="Delete feedback"
+        android:contentDescription="@string/delete_feedback"
         android:padding="8dp"
         android:tint="?android:textColorSecondary"
         app:srcCompat="@drawable/ic_close_white_24dp" />

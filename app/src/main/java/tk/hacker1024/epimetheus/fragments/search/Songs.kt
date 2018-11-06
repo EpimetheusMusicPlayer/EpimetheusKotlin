@@ -5,19 +5,11 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.paging.PagedListAdapter
-import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.ListPreloader
-import com.bumptech.glide.RequestBuilder
-import com.bumptech.glide.integration.recyclerview.RecyclerViewPreloader
-import com.bumptech.glide.load.resource.bitmap.RoundedCorners
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.util.ViewPreloadSizeProvider
 import kotlinx.android.synthetic.main.search_song_card.view.*
-import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.GlideRequest
 import tk.hacker1024.epimetheus.R
-import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.data.search.SearchType
 import tk.hacker1024.libepimetheus.data.search.Track
 

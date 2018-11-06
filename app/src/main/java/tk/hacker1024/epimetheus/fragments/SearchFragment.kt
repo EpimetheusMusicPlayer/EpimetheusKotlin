@@ -16,9 +16,6 @@ import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.fragments.search.*
-import tk.hacker1024.libepimetheus.data.PandoraData
-import tk.hacker1024.libepimetheus.data.search.Track
-import kotlin.math.atan
 
 class SearchFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {

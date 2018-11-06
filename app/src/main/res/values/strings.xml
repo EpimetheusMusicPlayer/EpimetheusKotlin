@@ -27,4 +27,14 @@
     </plurals>
 
     <string name="loading">Loading…</string>
+    <string name="artists">Artists</string>
+    <string name="genres">Genres</string>
+    <string name="rename_hint">New name</string>
+    <string name="delete_feedback">Delete feedback</string>
+    <string name="to_station_list">Go to station list</string>
+    <string name="nothing_playing">No station is playing. You can choose a station from the station list.</string>
+    <string name="use_portaller">Use Portaller</string>
+    <string name="feedback">Feedback</string>
+    <string name="rename_station">Rename station</string>
+    <string name="delete_station">Delete station</string>
 </resources>

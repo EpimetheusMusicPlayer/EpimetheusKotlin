@@ -8,7 +8,8 @@
     android:paddingTop="8dp"
     android:visibility="gone"
     tools:context=".fragments.MediaControlFragment"
-    tools:visibility="visible">
+    tools:visibility="visible"
+    tools:ignore="Overdraw">
 
     <ImageView
         android:id="@+id/playing_art"

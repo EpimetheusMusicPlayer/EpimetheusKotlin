@@ -82,7 +82,8 @@
                 android:textColor="?android:textColorPrimaryInverse"
                 android:textStyle="bold"
                 android:visibility="gone"
-                tools:text="2:50" />
+                tools:text="2:50"
+                tools:ignore="RtlSymmetry" />
 
             <ImageView
                 android:id="@+id/play_song"

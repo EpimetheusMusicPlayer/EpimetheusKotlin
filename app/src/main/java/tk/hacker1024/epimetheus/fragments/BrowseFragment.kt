@@ -251,7 +251,7 @@ class RecommendedFragment : Fragment() {
                 }
             }
 
-            holder.card.setOnClickListener { _ ->
+            holder.card.setOnClickListener {
                 dataSource[position].apply {
                     showAddStationConfirmationDialog(
                         name,

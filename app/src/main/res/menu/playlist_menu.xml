@@ -5,6 +5,6 @@
     <item
         android:id="@+id/feedback"
         android:icon="@drawable/ic_thumbs_up_down_white_24dp"
-        android:title="Feedback"
+        android:title="@string/feedback"
         app:showAsAction="ifRoom" />
 </menu>
