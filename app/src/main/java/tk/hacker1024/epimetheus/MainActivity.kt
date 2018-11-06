@@ -85,7 +85,7 @@ internal class EpimetheusViewModel : ViewModel() {
 class MainActivity : AppCompatActivity() {
     internal lateinit var mediaBrowser: MediaBrowserCompat
 
-    override fun onSupportNavigateUp() = drawer_layout.navigateUp(findNavController(R.id.nav_host_fragment))
+    override fun onSupportNavigateUp() = findNavController(R.id.nav_host_fragment).navigateUp(drawer_layout)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -184,6 +184,13 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(appBroadcastReceiver)
         mediaBrowser.disconnect()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.action == Intent.ACTION_SEARCH) {
+            findNavController(R.id.nav_host_fragment).navigate(R.id.searchFragment, intent.extras)
+        }
     }
 
     internal fun connectMediaBrowser(runOnConnect: (() -> Unit)? = null) {

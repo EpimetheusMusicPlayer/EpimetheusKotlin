@@ -94,10 +94,17 @@
         android:id="@+id/browseFragment"
         android:name="tk.hacker1024.epimetheus.fragments.BrowseFragment"
         android:label="@string/fragment_label_browse"
-        tools:layout="@layout/fragment_browse">
+        tools:layout="@layout/fragment_tabs">
         <action
             android:id="@+id/action_browseFragment_to_genresFragment"
             app:destination="@id/genresFragment"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+        <action
+            android:id="@+id/action_browseFragment_to_searchFragment"
+            app:destination="@id/searchFragment"
             app:enterAnim="@anim/nav_default_enter_anim"
             app:exitAnim="@anim/nav_default_exit_anim"
             app:popEnterAnim="@anim/nav_default_pop_enter_anim"
@@ -123,9 +130,29 @@
         android:id="@+id/feedbackFragment"
         android:name="tk.hacker1024.epimetheus.fragments.FeedbackFragment"
         android:label="@string/fragment_label_feedback"
-        tools:layout="@layout/fragment_feedback" >
+        tools:layout="@layout/fragment_tabs">
         <argument
             android:name="stationIndex"
-            app:argType="integer"/>
+            app:argType="integer" />
+    </fragment>
+    <fragment
+        android:id="@+id/searchFragment"
+        android:name="tk.hacker1024.epimetheus.fragments.SearchFragment"
+        android:label="@string/fragment_label_search"
+        tools:layout="@layout/fragment_search">
+        <argument
+            android:name="query"
+            app:argType="string"
+            app:nullable="true" />
+        <action
+            android:id="@+id/searchAgain"
+            app:destination="@id/searchFragment"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim"
+            app:launchSingleTop="true" />
+        <argument
+            android:name="tab"
+            app:argType="integer"
+            android:defaultValue="0" />
     </fragment>
 </navigation>

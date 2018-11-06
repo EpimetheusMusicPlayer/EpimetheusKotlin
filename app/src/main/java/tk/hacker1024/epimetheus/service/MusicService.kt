@@ -433,17 +433,19 @@ internal class MusicService : MediaBrowserServiceCompat() {
                     )
 
                     playlist.loadBitmapIfNeeded(0) {
-                        mediaNotificationBuilder.setLargeIcon(it)
-                        updateNotification()
+                        if (playlist.size > 0) {
+                            mediaNotificationBuilder.setLargeIcon(it)
+                            updateNotification()
 
-                        mediaSession.setMetadata(
-                            MediaMetadataCompat.Builder(mediaSession.controller.metadata)
-                                .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, playlist[0].artBitmap)
-                                .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, playlist[0].artUri.toString())
-                                .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, playlist[0].artBitmap)
-                                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, playlist[0].artUri.toString())
-                                .build()
-                        )
+                            mediaSession.setMetadata(
+                                MediaMetadataCompat.Builder(mediaSession.controller.metadata)
+                                    .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, playlist[0].artBitmap)
+                                    .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, playlist[0].artUri.toString())
+                                    .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, playlist[0].artBitmap)
+                                    .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, playlist[0].artUri.toString())
+                                    .build()
+                            )
+                        }
                     }
                 } catch (e: IOException) {
                     stop(MusicServiceResults.ERROR_NETWORK)

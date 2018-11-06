@@ -60,7 +60,7 @@ class PlaylistFragment : Fragment() {
 
         viewModel = ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java]
 
-        if (!viewModel.getStationList().value!![arguments!!.getInt("stationIndex")].isShuffle) {
+        if (arguments!!.getInt("stationIndex").let { it > -1 && !viewModel.getStationList().value!![it].isShuffle }) {
             setHasOptionsMenu(true)
         }
 

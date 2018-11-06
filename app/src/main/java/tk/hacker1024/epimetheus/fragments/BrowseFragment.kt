@@ -3,12 +3,12 @@ package tk.hacker1024.epimetheus.fragments
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.LinearLayout
+import androidx.appcompat.widget.SearchView
 import androidx.cardview.widget.CardView
 import androidx.core.graphics.drawable.toBitmap
+import androidx.core.view.get
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentPagerAdapter
@@ -39,7 +39,7 @@ import kotlinx.android.synthetic.main.browse_tab_categories.*
 import kotlinx.android.synthetic.main.browse_tab_categories.view.*
 import kotlinx.android.synthetic.main.browse_tab_recommended.*
 import kotlinx.android.synthetic.main.browse_tab_recommended.view.*
-import kotlinx.android.synthetic.main.fragment_browse.view.*
+import kotlinx.android.synthetic.main.fragment_tabs.view.*
 import kotlinx.android.synthetic.main.station_card.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -59,13 +59,21 @@ import tk.hacker1024.libepimetheus.data.search.Listenable
 import java.io.IOException
 import kotlin.math.round
 
+private lateinit var user: User
+
 class BrowseFragment : Fragment() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        user = ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].user.value!!
+        setHasOptionsMenu(true)
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        return inflater.inflate(R.layout.fragment_browse, container, false)!!.apply {
+        return inflater.inflate(R.layout.fragment_tabs, container, false)!!.apply {
             pager.adapter = PagerAdapter(childFragmentManager)
 
             ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].appBarColor.observe(
@@ -79,7 +87,7 @@ class BrowseFragment : Fragment() {
 
     override fun onStart() {
         super.onStart()
-        requireActivity().toolbar_layout.elevation = 0f
+        (requireActivity() as MainActivity).toolbar_layout.elevation = 0f
     }
 
     private inner class PagerAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm) {
@@ -101,6 +109,25 @@ class BrowseFragment : Fragment() {
                 }
             )
     }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.browse_menu, menu)
+        (menu[0].actionView as SearchView).apply {
+            queryHint = getString(R.string.search_hint)
+            setOnQueryTextListener(SearchQueryListener())
+        }
+    }
+
+    private inner class SearchQueryListener : SearchView.OnQueryTextListener {
+        override fun onQueryTextSubmit(query: String): Boolean {
+            findNavController().navigate(
+                BrowseFragmentDirections.actionBrowseFragmentToSearchFragment(query)
+            )
+            return true
+        }
+
+        override fun onQueryTextChange(newText: String) = false
+    }
 }
 
 class RecommendedViewModel : ViewModel() {
@@ -108,7 +135,6 @@ class RecommendedViewModel : ViewModel() {
 }
 
 class RecommendedFragment : Fragment() {
-    private lateinit var user: User
     private lateinit var viewModel: RecommendedViewModel
 
     private val artSize by lazy {
@@ -121,7 +147,6 @@ class RecommendedFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        user = ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].user.value!!
         viewModel = ViewModelProviders.of(this)[RecommendedViewModel::class.java]
 
         if (viewModel.recommendations.value == null) {
@@ -153,7 +178,7 @@ class RecommendedFragment : Fragment() {
                         adapter = Adapter(viewModel.recommendations.value?.artists)
                         addOnScrollListener(
                             RecyclerViewPreloader<String>(
-                                Glide.with(this),
+                                Glide.with(parentFragment!!),
                                 (adapter as Adapter),
                                 FixedPreloadSizeProvider(artSize, artSize),
                                 6
@@ -168,7 +193,7 @@ class RecommendedFragment : Fragment() {
                         @Suppress("UNCHECKED_CAST")
                         addOnScrollListener(
                             RecyclerViewPreloader<String>(
-                                Glide.with(this),
+                                Glide.with(parentFragment!!),
                                 adapter as ListPreloader.PreloadModelProvider<String>,
                                 FixedPreloadSizeProvider(artSize, artSize),
                                 6
@@ -205,7 +230,7 @@ class RecommendedFragment : Fragment() {
                 .transition(DrawableTransitionOptions.withCrossFade())
                 .thumbnail(
                     GlideApp
-                        .with(this@RecommendedFragment)
+                        .with(parentFragment!!)
                         .load("https://www.pandora.com/web-version/1.34.2/images/artist_500.png")
                         .override(artSize)
                         .transform(RoundedCorners(8))
@@ -226,7 +251,7 @@ class RecommendedFragment : Fragment() {
                 }
             }
 
-            holder.card.setOnClickListener {
+            holder.card.setOnClickListener { _ ->
                 dataSource[position].apply {
                     showAddStationConfirmationDialog(
                         name,
@@ -263,7 +288,7 @@ class RecommendedFragment : Fragment() {
 
         override fun getPreloadRequestBuilder(item: String): RequestBuilder<Drawable> {
             return GlideApp
-                .with(this@RecommendedFragment)
+                .with(parentFragment!!)
                 .load(item)
                 .override(artSize)
                 .centerCrop()
@@ -301,7 +326,6 @@ class CategoriesViewModel : ViewModel() {
 }
 
 class CategoryFragment : Fragment() {
-    private lateinit var user: User
     private lateinit var viewModel: CategoriesViewModel
 
     private val artSize by lazy {
@@ -314,7 +338,6 @@ class CategoryFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        user = ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].user.value!!
         viewModel = ViewModelProviders.of(this)[CategoriesViewModel::class.java]
 
         if (viewModel.categories.value == null) {
@@ -381,7 +404,7 @@ class CategoryFragment : Fragment() {
                 .transition(DrawableTransitionOptions.withCrossFade())
                 .thumbnail(
                     GlideApp
-                        .with(this@CategoryFragment)
+                        .with(parentFragment!!)
                         .load(GENERIC_ART_URL)
                         .transform(RoundedCorners(8))
                 )
@@ -397,7 +420,7 @@ class CategoryFragment : Fragment() {
 
         override fun getPreloadRequestBuilder(item: String): RequestBuilder<Drawable> {
             return GlideApp
-                .with(this@CategoryFragment)
+                .with(parentFragment!!)
                 .load(item)
                 .centerCrop()
                 .transform(RoundedCorners(8))

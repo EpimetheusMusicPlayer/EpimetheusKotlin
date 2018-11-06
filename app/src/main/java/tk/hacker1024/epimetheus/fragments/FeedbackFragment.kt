@@ -27,7 +27,7 @@ import com.bumptech.glide.util.ViewPreloadSizeProvider
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.feedback_card.view.*
 import kotlinx.android.synthetic.main.feedback_tab.view.*
-import kotlinx.android.synthetic.main.fragment_feedback.view.*
+import kotlinx.android.synthetic.main.fragment_tabs.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.EpimetheusViewModel
@@ -48,7 +48,7 @@ class FeedbackFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        return inflater.inflate(R.layout.fragment_feedback, container, false).apply {
+        return inflater.inflate(R.layout.fragment_tabs, container, false).apply {
             pager.adapter = PagerAdapter(childFragmentManager)
 
             ViewModelProviders.of(requireActivity())[EpimetheusViewModel::class.java].appBarColor.observe(
@@ -69,7 +69,7 @@ class FeedbackFragment : Fragment() {
 
     override fun onStart() {
         super.onStart()
-        requireActivity().toolbar_layout.elevation = 0f
+        (requireActivity() as MainActivity).toolbar_layout.elevation = 0f
     }
 
     private inner class PagerAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm) {
@@ -215,7 +215,7 @@ class FeedbackTab : Fragment() {
                     song_album.text = getString(R.string.loading)
 
                     GlideApp
-                        .with(this@FeedbackTab)
+                        .with(parentFragment!!)
                         .load(GENERIC_ART_URL)
                         .transform(RoundedCorners(8))
                         .into(card.song_album_art)
@@ -245,11 +245,11 @@ class FeedbackTab : Fragment() {
                         song_artist.text = artist
                         song_album.text = album
 
-                        getPreloadRequestBuilder(currentList!![position]!!.getArtUrl(artSize))
+                        getPreloadRequestBuilder(getArtUrl(artSize))
                             .transition(DrawableTransitionOptions.withCrossFade())
                             .thumbnail(
                                 GlideApp
-                                    .with(this@FeedbackTab)
+                                    .with(parentFragment!!)
                                     .load(GENERIC_ART_URL)
                                     .transform(RoundedCorners(8))
                             )
@@ -264,7 +264,7 @@ class FeedbackTab : Fragment() {
 
         override fun getPreloadRequestBuilder(item: String) =
             GlideApp
-                .with(this@FeedbackTab)
+                .with(parentFragment!!)
                 .load(item)
                 .centerCrop()
                 .transform(RoundedCorners(8))

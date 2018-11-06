@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">Epimetheus</string>
+    <string name="search_hint">Search for stations, playlists, songs, artists, and more.</string>
     <string name="signout">Sign out</string>
     <string name="profile_picture">Profile picture</string>
 
@@ -13,6 +14,16 @@
         <item quantity="zero">&lt;1K listeners</item>
         <item quantity="one">%dK listeners</item>
         <item quantity="other">%dK listeners</item>
+    </plurals>
+
+    <plurals name="albumsCount">
+        <item quantity="one">%d Album</item>
+        <item quantity="other">%d Albums</item>
+    </plurals>
+
+    <plurals name="tracksCount">
+        <item quantity="one">%d Track</item>
+        <item quantity="other">%d Tracks</item>
     </plurals>
 
     <string name="loading">Loading…</string>
