@@ -23,7 +23,7 @@ import tk.hacker1024.libepimetheus.data.search.GenreStation
 import tk.hacker1024.libepimetheus.data.search.SearchType
 import java.io.IOException
 
-internal class Stations : SearchTab<GenreStation>(SearchType.STATION) {
+internal class Stations : SearchTabFragment<GenreStation>(SearchType.STATION) {
     companion object {
         internal const val LABEL = "Stations"
     }
@@ -47,7 +47,7 @@ internal class Stations : SearchTab<GenreStation>(SearchType.STATION) {
                             showStationAddingSnackbar(mStationName.text, view!!)
                             GlobalScope.launch {
                                 try {
-                                    currentList!![adapterPosition]!!.add(user)
+                                    getItem(adapterPosition)!!.add(user)
                                     StationListFragment.reloadOnShow = true
                                     showStationAddedSnackbar(mStationName.text, view!!, View.OnClickListener {
                                         findNavController().popBackStack(R.id.stationListFragment, false)

@@ -35,9 +35,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <service
-            android:name="tk.hacker1024.epimetheus.service.MusicService"
+            android:name="tk.hacker1024.epimetheus.service.EpimetheusMusicService"
             android:exported="false"
             android:stopWithTask="true">
             <intent-filter>

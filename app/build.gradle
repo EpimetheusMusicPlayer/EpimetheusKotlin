@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 
-apply plugin: 'kotlin-android'
-
 apply plugin: 'kotlin-android-extensions'
+
+apply plugin: 'kotlin-android'
 
 apply plugin: 'kotlin-kapt'
 
@@ -43,8 +43,8 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.0.0'
 
-    implementation 'androidx.core:core-ktx:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.0.0'
+    implementation 'androidx.core:core-ktx:1.0.1'
+    implementation 'androidx.appcompat:appcompat:1.0.2'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.0-alpha2'
     implementation 'androidx.recyclerview:recyclerview:1.0.0'
     implementation 'androidx.preference:preference:1.0.0'
@@ -63,13 +63,22 @@ dependencies {
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     kapt "androidx.lifecycle:lifecycle-compiler:$lifecycle_version"
 
-    def exoplayer_version = "2.9.0"
-    implementation "com.google.android.exoplayer:exoplayer-core:$exoplayer_version"
+    def eventbus_version = "3.1.1"
+    implementation "org.greenrobot:eventbus:$eventbus_version"
+    kapt "org.greenrobot:eventbus-annotation-processor:$eventbus_version"
+
+    implementation 'com.google.android.exoplayer:exoplayer-core:2.9.2'
 
     def glide_version = "4.8.0"
     implementation "com.github.bumptech.glide:glide:$glide_version"
     kapt "com.github.bumptech.glide:compiler:$glide_version"
     implementation("com.github.bumptech.glide:recyclerview-integration:$glide_version") {
         transitive = false
+    }
+}
+
+kapt {
+    arguments {
+        arg('eventBusIndex', 'tk.hacker1024.epimetheus.EventBusIndex')
     }
 }

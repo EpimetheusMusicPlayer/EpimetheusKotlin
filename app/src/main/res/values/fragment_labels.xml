@@ -10,5 +10,6 @@
     <string name="fragment_label_genres">Genres</string>
     <string name="fragment_label_feedback">Feedback</string>
     <string name="fragment_label_search">@string/fragment_label_browse</string>
+    <string name="fragment_label_song_details">Song details</string>
     <string name="fragment_label_settings">Settings</string>
 </resources>

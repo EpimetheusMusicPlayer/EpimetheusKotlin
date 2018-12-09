@@ -34,9 +34,10 @@ import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.R
-import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
+import tk.hacker1024.epimetheus.service.data.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.data.Station
 import tk.hacker1024.libepimetheus.data.feedback.FeedbackItem
+import tk.hacker1024.libepimetheus.data.search.toTrack
 import tk.hacker1024.libepimetheus.deleteFeedback
 import tk.hacker1024.libepimetheus.getFeedback
 import java.io.IOException
@@ -176,6 +177,12 @@ class FeedbackTab : Fragment() {
         internal inner class ViewHolder(internal val card: LinearLayout) : RecyclerView.ViewHolder(card) {
             init {
                 sizeProvider.setView(card)
+
+                card.setOnClickListener {
+                    findNavController().navigate(
+                        FeedbackFragmentDirections.songDetails(getItem(adapterPosition)!!.toTrack())
+                    )
+                }
 
                 card.delete.setOnClickListener {
                     card.delete.visibility = View.GONE

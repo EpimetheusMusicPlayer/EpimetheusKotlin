@@ -1,6 +1,9 @@
 package tk.hacker1024.epimetheus
 
-import android.content.*
+import android.content.ComponentName
+import android.content.Context
+import android.content.DialogInterface
+import android.content.Intent
 import android.graphics.Color
 import android.media.AudioManager
 import android.os.Build
@@ -16,24 +19,24 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProviders
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.findNavController
 import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupWithNavController
+import androidx.preference.PreferenceManager
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.activity_main.view.*
 import kotlinx.android.synthetic.main.nav_header.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
 import tk.hacker1024.epimetheus.dialogs.showNetworkErrorDialog
 import tk.hacker1024.epimetheus.dialogs.showPandoraErrorDialog
 import tk.hacker1024.epimetheus.fragments.AUTH_SHARED_PREFS_NAME
-import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
-import tk.hacker1024.epimetheus.service.MusicService
-import tk.hacker1024.epimetheus.service.MusicServiceResults
-import tk.hacker1024.epimetheus.service.RESULTS_BROADCAST_FILTER
+import tk.hacker1024.epimetheus.service.EpimetheusMusicService
+import tk.hacker1024.epimetheus.service.data.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.Stations
 import tk.hacker1024.libepimetheus.User
 import tk.hacker1024.libepimetheus.data.Station
@@ -41,7 +44,7 @@ import java.io.IOException
 
 // TODO manage audio focus
 
-inline val @receiver:ColorInt Int.darken: Int
+internal inline val @receiver:ColorInt Int.darken: Int
     @ColorInt get() {
         return Color.HSVToColor(
             FloatArray(3).apply {
@@ -51,6 +54,12 @@ inline val @receiver:ColorInt Int.darken: Int
             }
         )
     }
+
+internal inline val Context.artSize
+    get() = PreferenceManager.getDefaultSharedPreferences(this).getString(
+        "art_size",
+        "500"
+    )!!.toInt()
 
 internal class EpimetheusViewModel : ViewModel() {
     internal var user = MutableLiveData<User>()
@@ -83,18 +92,20 @@ internal class EpimetheusViewModel : ViewModel() {
 }
 
 class MainActivity : AppCompatActivity() {
+    private val navController by lazy { findNavController(R.id.nav_host_fragment) }
     internal lateinit var mediaBrowser: MediaBrowserCompat
+    private val viewModel by lazy { ViewModelProviders.of(this)[EpimetheusViewModel::class.java] }
 
-    override fun onSupportNavigateUp() = findNavController(R.id.nav_host_fragment).navigateUp(drawer_layout)
+    override fun onSupportNavigateUp() = navController.navigateUp(drawer_layout)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         setSupportActionBar(toolbar)
-        navigation_view.setupWithNavController(findNavController(R.id.nav_host_fragment))
+        navigation_view.setupWithNavController(navController)
         drawer_layout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START)
-        NavigationUI.setupActionBarWithNavController(this, findNavController(R.id.nav_host_fragment))
+        NavigationUI.setupActionBarWithNavController(this, navController)
 
         ViewModelProviders.of(this)[EpimetheusViewModel::class.java].user.observe(this, Observer {
             navigation_view.getHeaderView(0).also { view ->
@@ -131,14 +142,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-            appBroadcastReceiver,
-            IntentFilter(RESULTS_BROADCAST_FILTER)
-        )
-
         mediaBrowser = MediaBrowserCompat(
             this,
-            ComponentName(this, MusicService::class.java),
+            ComponentName(this, EpimetheusMusicService::class.java),
             connectionCallback,
             null
         )
@@ -170,6 +176,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        eventBus.register(this)
+    }
+
     override fun onResume() {
         super.onResume()
         volumeControlStream = AudioManager.STREAM_MUSIC
@@ -177,25 +188,26 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        eventBus.unregister(this)
         mediaBrowser.disconnect()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(appBroadcastReceiver)
+        eventBus.unregister(this)
         mediaBrowser.disconnect()
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.action == Intent.ACTION_SEARCH) {
-            findNavController(R.id.nav_host_fragment).navigate(R.id.searchFragment, intent.extras)
+            navController.navigate(R.id.searchFragment, intent.extras)
         }
     }
 
     internal fun connectMediaBrowser(runOnConnect: (() -> Unit)? = null) {
         if (!mediaBrowser.isConnected) {
-            connectionCallback.runOnConnect = runOnConnect
+            connectionCallback.runOnConnect.add(runOnConnect)
             try {
                 mediaBrowser.connect()
             } catch (e: IllegalStateException) {
@@ -207,51 +219,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val connectionCallback = object : MediaBrowserCompat.ConnectionCallback() {
-        var runOnConnect: (() -> Unit)? = null
+        var runOnConnect: MutableList<(() -> Unit)?> = mutableListOf()
 
         override fun onConnected() {
             MediaControllerCompat.setMediaController(
                 this@MainActivity,
                 MediaControllerCompat(this@MainActivity, mediaBrowser.sessionToken)
             )
-            runOnConnect?.invoke()
-            runOnConnect = null
-        }
-
-        override fun onConnectionSuspended() {
-            println("connection suspended")
-        }
-
-        override fun onConnectionFailed() {
-            println("failed to connect")
+            runOnConnect.forEach { it?.invoke() }
+            runOnConnect.clear()
         }
     }
 
-    private val appBroadcastReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            if (intent.getBooleanExtra("disconnect", false)) {
-                mediaBrowser.disconnect()
-            }
-
-            when (intent.getSerializableExtra("error")) {
-                MusicServiceResults.REQUEST_CLOSE_APP -> {
-                    MediaControllerCompat.getMediaController(this@MainActivity).transportControls.stop()
-                    finishAndRemoveTask()
-                }
-
-                MusicServiceResults.REQUEST_STOP_MUSIC -> {
-                    findNavController(R.id.nav_host_fragment).apply {
-                        when (currentDestination!!.id) {
-                            R.id.playlistFragment -> navigateUp()
-                            R.id.feedbackFragment -> popBackStack(R.id.stationListFragment, false)
-                        }
-                    }
-                }
-
-                MusicServiceResults.ERROR_NETWORK, MusicServiceResults.ERROR_INTERNAL -> networkError()
-
-                MusicServiceResults.ERROR_PANDORA -> pandoraError((intent.getSerializableExtra("error") as MusicServiceResults).message)
-            }
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onServiceEvent(event: MusicServiceEvent) {
+        if (event.disconnect) {
+            mediaBrowser.disconnect()
+            viewModel.statusBarColor.postValue(0)
+            viewModel.appBarColor.postValue(0)
         }
     }
 
@@ -287,7 +272,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun navigateToStationListScreenFromPlaylistScreen(@Suppress("UNUSED_PARAMETER") dialog: DialogInterface) {
-        findNavController(R.id.nav_host_fragment).apply {
+        navController.apply {
             if (currentDestination!!.id == R.id.playlistFragment) {
                 popBackStack(R.id.stationListFragment, false)
             }
@@ -295,7 +280,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun logout() {
-        stopService(Intent(this, MusicService::class.java))
+        stopService(Intent(this, EpimetheusMusicService::class.java))
         getSharedPreferences(AUTH_SHARED_PREFS_NAME, MODE_PRIVATE).edit().clear().apply()
         finish()
         startActivity(

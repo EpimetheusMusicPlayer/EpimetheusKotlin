@@ -13,7 +13,7 @@ import tk.hacker1024.epimetheus.R
 import tk.hacker1024.libepimetheus.data.search.Playlist
 import tk.hacker1024.libepimetheus.data.search.SearchType
 
-internal class Playlists : SearchTab<Playlist>(SearchType.PLAYLIST) {
+internal class Playlists : SearchTabFragment<Playlist>(SearchType.PLAYLIST) {
     companion object {
         internal const val LABEL = "Playlists"
     }

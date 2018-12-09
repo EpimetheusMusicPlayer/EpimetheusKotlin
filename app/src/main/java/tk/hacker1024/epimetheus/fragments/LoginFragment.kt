@@ -25,13 +25,13 @@ import kotlinx.android.synthetic.main.fragment_login.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.MainActivity
-import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.dialogs.showLocationErrorDialog
 import tk.hacker1024.epimetheus.dialogs.showNetworkErrorDialog
-import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
+import tk.hacker1024.epimetheus.service.data.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.InvalidLoginException
 import tk.hacker1024.libepimetheus.LocationException
 import tk.hacker1024.libepimetheus.PandoraException

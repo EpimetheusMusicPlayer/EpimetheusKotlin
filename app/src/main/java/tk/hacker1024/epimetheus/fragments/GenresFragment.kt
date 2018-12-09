@@ -32,7 +32,7 @@ import tk.hacker1024.epimetheus.R
 import tk.hacker1024.epimetheus.dialogs.showAddStationConfirmationDialog
 import tk.hacker1024.epimetheus.dialogs.showStationAddedSnackbar
 import tk.hacker1024.epimetheus.dialogs.showStationAddingSnackbar
-import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
+import tk.hacker1024.epimetheus.service.data.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.User
 import tk.hacker1024.libepimetheus.data.search.GenreCategory
 import tk.hacker1024.libepimetheus.data.search.GenreStation

@@ -35,7 +35,8 @@ import tk.hacker1024.epimetheus.EpimetheusViewModel
 import tk.hacker1024.epimetheus.GlideApp
 import tk.hacker1024.epimetheus.MainActivity
 import tk.hacker1024.epimetheus.R
-import tk.hacker1024.epimetheus.service.GENERIC_ART_URL
+import tk.hacker1024.epimetheus.service.EpimetheusMusicService
+import tk.hacker1024.epimetheus.service.data.GENERIC_ART_URL
 import tk.hacker1024.libepimetheus.User
 import tk.hacker1024.libepimetheus.delete
 import tk.hacker1024.libepimetheus.rename
@@ -239,9 +240,10 @@ class StationListFragment : Fragment() {
 
             card.setOnClickListener {
                 findNavController().navigate(
-                    StationListFragmentDirections.openAndPlayStationPlaylist()
-                        .setStationIndex(adapterPosition)
+                    StationListFragmentDirections.actionStationListFragmentToQueueFragment()
+                        .setId(adapterPosition)
                         .setStart(true)
+                        .setSource(EpimetheusMusicService.Source.STATION.id)
                 )
             }
         }

@@ -1,8 +1,6 @@
 package tk.hacker1024.epimetheus.fragments
 
 import android.annotation.SuppressLint
-import android.app.ActivityManager
-import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
 import android.support.v4.media.MediaMetadataCompat
@@ -23,7 +21,7 @@ import kotlinx.android.synthetic.main.fragment_media_control.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import tk.hacker1024.epimetheus.*
-import tk.hacker1024.epimetheus.service.MusicService
+import tk.hacker1024.epimetheus.service.INTENT_ID_KEY
 
 class MediaControlFragment : Fragment() {
     internal lateinit var viewModel: EpimetheusViewModel
@@ -52,9 +50,6 @@ class MediaControlFragment : Fragment() {
         view.stop.setOnClickListener {
             mediaController!!.transportControls.stop()
             view.visibility = View.GONE
-
-            viewModel.statusBarColor.postValue(0)
-            viewModel.appBarColor.postValue(0)
         }
 
         view.rewind.setOnClickListener {
@@ -82,8 +77,9 @@ class MediaControlFragment : Fragment() {
 
         view.setOnClickListener {
             findNavController().apply {
-                if (currentDestination!!.id != R.id.playlistFragment) {
-                    navigate(R.id.openPlaylist)
+                if (currentDestination!!.id != R.id.queueFragment) {
+                    popBackStack(R.id.stationListFragment, false)
+                    navigate(StationListFragmentDirections.actionStationListFragmentToQueueFragment())
                 }
             }
         }
@@ -94,8 +90,6 @@ class MediaControlFragment : Fragment() {
     override fun onStart() {
         super.onStart()
 
-        showIfServiceRunning()
-
         fun onConnect() {
             mediaController = MediaControllerCompat.getMediaController(requireActivity())
             mediaController!!.registerCallback(controllerCallback)
@@ -103,14 +97,11 @@ class MediaControlFragment : Fragment() {
             mediaController!!.metadata?.let {
                 controllerCallback.onMetadataChanged(it)
             }
+            showIfServiceRunning()
         }
 
-        if (findNavController().currentDestination!!.id == R.id.playlistFragment) {
+        (requireActivity() as MainActivity).connectMediaBrowser {
             onConnect()
-        } else {
-            (requireActivity() as MainActivity).connectMediaBrowser {
-                onConnect()
-            }
         }
     }
 
@@ -122,9 +113,9 @@ class MediaControlFragment : Fragment() {
 
     private fun updatePlaybackState(state: Int) {
         fun changeClickableState(clickable: Boolean) {
-            view!!.rewind?.isClickable = clickable
-            view!!.play_pause?.isClickable = clickable
-            view!!.fast_forward?.isClickable = clickable
+            view?.rewind?.isClickable = clickable
+            view?.play_pause?.isClickable = clickable
+            view?.fast_forward?.isClickable = clickable
         }
 
         when (state) {
@@ -154,7 +145,7 @@ class MediaControlFragment : Fragment() {
     }
 
     internal fun showIfServiceRunning() {
-        if (isServiceRunning(requireContext())) show()
+        if (serviceRunning) show()
     }
 
     private var oldUri: String? = null
@@ -177,33 +168,22 @@ class MediaControlFragment : Fragment() {
                         .into(view.playing_art)
                     oldUri = metadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI)
 
-                    if (findNavController().currentDestination!!.id != R.id.playlistFragment) {
-                        GlobalScope.launch {
-                            Palette.Builder(metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART))
-                                .generate().apply {
-                                    viewModel.apply {
-                                        appBarColor.postValue(getDarkVibrantColor(Color.DKGRAY))
-                                        statusBarColor.postValue(getDarkVibrantColor(Color.DKGRAY).darken)
-                                        titleColor.postValue(getLightVibrantColor(Color.WHITE))
-                                        subtitleColor.postValue(getLightMutedColor(Color.LTGRAY))
-                                    }
+                    GlobalScope.launch {
+                        Palette.Builder(metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART))
+                            .generate().apply {
+                                viewModel.apply {
+                                    appBarColor.postValue(getDarkVibrantColor(Color.DKGRAY))
+                                    statusBarColor.postValue(getDarkVibrantColor(Color.DKGRAY).darken)
+                                    titleColor.postValue(getLightVibrantColor(Color.WHITE))
+                                    subtitleColor.postValue(getLightMutedColor(Color.LTGRAY))
                                 }
-                        }
+                            }
                     }
                 }
             }
         }
     }
 
-    companion object {
-        fun isServiceRunning(context: Context): Boolean {
-            @Suppress("DEPRECATION")
-            for (service in (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getRunningServices(Int.MAX_VALUE)) {
-                if ((service.foreground && service.service.className == MusicService::class.java.name)) {
-                    return true
-                }
-            }
-            return false
-        }
-    }
+    private inline val serviceRunning
+        get() = mediaController?.extras?.getInt(INTENT_ID_KEY, -1) ?: -1 >= 0
 }

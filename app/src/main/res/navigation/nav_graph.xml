@@ -10,13 +10,6 @@
         android:label="@string/fragment_label_station_list"
         tools:layout="@layout/fragment_station_list">
         <action
-            android:id="@+id/openAndPlayStationPlaylist"
-            app:destination="@id/playlistFragment"
-            app:enterAnim="@anim/nav_default_enter_anim"
-            app:exitAnim="@anim/nav_default_exit_anim"
-            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
-            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
-        <action
             android:id="@+id/action_stationListFragment_to_settingsFragment"
             app:destination="@id/settingsFragment"
             app:enterAnim="@anim/nav_default_enter_anim"
@@ -37,23 +30,9 @@
             app:exitAnim="@anim/nav_default_exit_anim"
             app:popEnterAnim="@anim/nav_default_pop_enter_anim"
             app:popExitAnim="@anim/nav_default_pop_exit_anim" />
-    </fragment>
-    <fragment
-        android:id="@+id/playlistFragment"
-        android:name="tk.hacker1024.epimetheus.fragments.PlaylistFragment"
-        android:label="@string/fragment_label_playlist"
-        tools:layout="@layout/fragment_playlist">
-        <argument
-            android:name="stationIndex"
-            android:defaultValue="-1"
-            app:argType="integer" />
-        <argument
-            android:name="start"
-            android:defaultValue="false"
-            app:argType="boolean" />
         <action
-            android:id="@+id/action_playlistFragment_to_feedbackFragment"
-            app:destination="@id/feedbackFragment"
+            android:id="@+id/action_stationListFragment_to_queueFragment"
+            app:destination="@id/queueFragment"
             app:enterAnim="@anim/nav_default_enter_anim"
             app:exitAnim="@anim/nav_default_exit_anim"
             app:popEnterAnim="@anim/nav_default_pop_enter_anim"
@@ -110,13 +89,6 @@
             app:popEnterAnim="@anim/nav_default_pop_enter_anim"
             app:popExitAnim="@anim/nav_default_pop_exit_anim" />
     </fragment>
-    <action
-        android:id="@+id/openPlaylist"
-        app:destination="@id/playlistFragment"
-        app:enterAnim="@anim/nav_default_enter_anim"
-        app:exitAnim="@anim/nav_default_exit_anim"
-        app:popEnterAnim="@anim/nav_default_pop_enter_anim"
-        app:popExitAnim="@anim/nav_default_pop_exit_anim" />
     <fragment
         android:id="@+id/genresFragment"
         android:name="tk.hacker1024.epimetheus.fragments.GenresFragment"
@@ -148,11 +120,51 @@
             android:id="@+id/searchAgain"
             app:destination="@id/searchFragment"
             app:exitAnim="@anim/nav_default_exit_anim"
-            app:popExitAnim="@anim/nav_default_pop_exit_anim"
-            app:launchSingleTop="true" />
+            app:launchSingleTop="true"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
         <argument
             android:name="tab"
+            android:defaultValue="0"
+            app:argType="integer" />
+    </fragment>
+    <fragment
+        android:id="@+id/songDetailsFragment"
+        android:name="tk.hacker1024.epimetheus.fragments.search.details.SongDetails"
+        android:label="@string/fragment_label_song_details"
+        tools:layout="@layout/details_song" >
+        <argument
+            android:name="track"
+            app:argType="tk.hacker1024.libepimetheus.data.search.Track" />
+    </fragment>
+    <action
+        android:id="@+id/songDetails"
+        app:destination="@id/songDetailsFragment"
+        app:enterAnim="@anim/nav_default_enter_anim"
+        app:exitAnim="@anim/nav_default_exit_anim"
+        app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+        app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+    <fragment
+        android:id="@+id/queueFragment"
+        android:name="tk.hacker1024.epimetheus.fragments.QueueFragment"
+        android:label="@string/fragment_label_playlist" >
+        <argument
+            android:name="start"
+            app:argType="boolean"
+            android:defaultValue="false" />
+        <argument
+            android:name="source"
             app:argType="integer"
-            android:defaultValue="0" />
+            android:defaultValue="-1" />
+        <argument
+            android:name="id"
+            app:argType="integer"
+            android:defaultValue="-1" />
+        <action
+            android:id="@+id/action_queueFragment_to_feedbackFragment"
+            app:destination="@id/feedbackFragment"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
     </fragment>
 </navigation>
