@@ -5,6 +5,8 @@
 
 Epimetheus is an open-source Pandora Music client for Android. The app uses [libepimetheus](https://github.com/EpimetheusAndroid/libepimetheus) to connect to Pandora. Both the app and the library are currently in development, and pull requests and issues are welcome.
 
+## This version of the app is abandoned. I'm rewriting it with Flutter.
+
 #### Implemented features
 
 - View stations
